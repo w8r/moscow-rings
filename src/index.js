@@ -3,11 +3,13 @@ const L = global.L || require('leaflet');
 import xhr from 'xhr';
 import * as Spinner from 'spin.js';
 import * as config from '../config.json';
+import 'leaflet-hash';
 
 const MAP_STYLE = 'mapbox.dark';
 
-let map = L.map(document.querySelector('.map'))
-  .setView([55.73522939875256, 37.582855224609375], 10);
+let map = global.map = L.map(document.querySelector('.map'))
+  .setView([55.74194999893639, 37.60596499188811], 10);
+let hash = L.hash(map);
 
 let tiles = L.tileLayer(
   'https://api.mapbox.com/v4/' +
@@ -24,7 +26,8 @@ xhr({
     data = JSON.parse(data);
     var gj = L.geoJson(data, {
       color: '#f51a1a',
-      weight: 2
+      weight: 2,
+      fillOpacity: 0.1
     });
     var bounds = gj.getBounds();
     map.fitBounds(bounds, {padding: [20, 20]});

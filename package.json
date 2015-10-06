@@ -47,6 +47,7 @@
   },
   "dependencies": {
     "leaflet": "^0.7.5",
+    "leaflet-hash": "^0.2.1",
     "spin.js": "^2.3.2",
     "xhr": "^2.1.0"
   },
