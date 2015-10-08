@@ -2,7 +2,7 @@ var gulp = require('gulp');
 
 var browserify = require('browserify');
 var watchify = require('watchify');
-var babelify = require('babelify');
+var babel = require('babelify');
 
 var source = require('vinyl-source-stream');
 var buffer = require('vinyl-buffer');
@@ -12,6 +12,7 @@ var rename = require('gulp-rename');
 var uglify = require('gulp-uglify');
 var sourcemaps = require('gulp-sourcemaps');
 var serve = require('gulp-serve');
+var rename = require('gulp-rename')
 
 
 /* nicer browserify errors */
@@ -21,6 +22,8 @@ var chalk = require('chalk');
 var less = require('gulp-less');
 var path = require('path');
 
+var dependencies = [];
+
 gulp.task('less', function () {
   return gulp.src('./src/**/*.less')
     .pipe(less({
@@ -29,77 +32,89 @@ gulp.task('less', function () {
     .pipe(gulp.dest('./build/css'));
 });
 
-function map_error(err) {
-  if (err.fileName) {
-    // regular error
-    gutil.log(chalk.red(err.name)
-      + ': '
-      + chalk.yellow(err.fileName.replace(__dirname + '/src/', ''))
-      + ': '
-      + 'Line '
-      + chalk.magenta(err.lineNumber)
-      + ' & '
-      + 'Column '
-      + chalk.magenta(err.columnNumber || err.column)
-      + ': '
-      + chalk.blue(err.description))
-  } else {
-    // browserify error..
-    gutil.log(chalk.red(err.name)
-      + ': '
-      + chalk.yellow(err.message))
+function compile(watch) {
+  var browserified = browserify('./src/index.js', {
+      require: dependencies,
+      debug: true,
+      'ignore-missing': true
+    })
+    .transform(
+      babel.configure({
+        optional: ['runtime']
+      })
+    );
+
+  var bundler = browserified;
+
+  if (watch) {
+    dependencies.forEach(function(dep) {
+      browserified.external(dep);
+    });
+    bundler = watchify(browserified);
   }
+
+  function rebundle() {
+    var stream = bundler.bundle()
+      .on('error', function(err) {
+        gutil.log(
+          gutil.colors.red('Watchify:'),
+          gutil.colors.white(err)
+        );
+        this.emit('end');
+      })
+      .pipe(source('app.js'))
+      .pipe(buffer())
+      .pipe(gulp.dest('./build'))
+      .pipe(sourcemaps.init({
+        loadMaps: true
+      }))
+      .pipe(rename('app.min.js'))
+      .pipe(sourcemaps.init({
+        loadMaps: true
+      }));
+
+    if (watch) {
+      stream
+        .pipe(sourcemaps.write('.'))
+        .pipe(gulp.dest('./build'));
+    } else {
+      stream
+         .pipe(uglify())
+         .pipe(sourcemaps.write('.'))
+         .pipe(gulp.dest('./build'));
+    }
+  }
+
+  if (watch) {
+    bundler
+      .on('update', function() {
+        rebundle();
+      })
+      .on('log', function(msg) {
+        gutil.log(
+          gutil.colors.green('Watchify:'),
+          gutil.colors.white(msg)
+        );
+      });
+  }
+
+  rebundle();
 }
-/* */
 
-gulp.task('watchify', function () {
-  var args = merge(watchify.args, { debug: true });
-  var bundler = watchify(
-    browserify('./src/index.js', args)
-    .external('leaflet')
-  ).transform(babelify, { optional: ['runtime'] });
-  bundle_js(bundler);
+function watch() {
+  return compile(true);
+}
 
-  bundler.on('update', function () {
-    bundle_js(bundler)
-  });
+gulp.task('build', function() {
+  return compile();
 });
 
-function bundle_js(bundler) {
-  return bundler.bundle()
-    .on('error', map_error)
-    .pipe(source('app.js'))
-    .pipe(buffer())
-    .pipe(gulp.dest('./build/'))
-    .pipe(rename('app.min.js'))
-    .pipe(sourcemaps.init({ loadMaps: true }))
-      // capture sourcemaps from transforms
-      .pipe(uglify())
-    .pipe(sourcemaps.write('.'))
-    .pipe(gulp.dest('./build/'));
-}
-
-// Without watchify
-gulp.task('browserify', function () {
-  var bundler = browserify('./src/index.js', { debug: true })
-  .external('leaflet')
-  .transform(babelify, { optional: ['runtime'] });
-
-  return bundle_js(bundler);
+gulp.task('scripts', function() {
+  bundleApp(true);
 });
 
-// Without sourcemaps
-gulp.task('browserify-production', function () {
-  var bundler = browserify('./src/index.js')
-    .transform(babelify, { optional: ['runtime'] });
-
-  return bundler.bundle()
-    .on('error', map_error)
-    .pipe(source('app.js'))
-    .pipe(buffer())
-    .pipe(rename('app.min.js'))
-    .pipe(uglify())
-    .pipe(gulp.dest('./build/'));
+gulp.task('watch', function() {
+  watch();
 });
 
 gulp.task('serve', serve({
@@ -111,6 +126,6 @@ gulp.task('watch-less', function() {
   return gulp.watch('./src/**/*.less', ['less']);
 });
 
-gulp.task('default', ['watchify', 'watch-less', 'serve']);
+gulp.task('default', ['watch', 'watch-less', 'serve']);
 
-gulp.task('build', ['browserify-production', 'less']);
+gulp.task('production', ['build', 'less']);
