@@ -24,7 +24,10 @@ export default class App {
 
   constructor(mapContainer, dataUrl) {
 
-    this._map = global.map = L.map(document.querySelector(mapContainer));
+    this._map = global.map = L.map(document.querySelector(mapContainer), {
+      zoomControl: false
+    });
+    L.control.zoom({ position: 'bottomright' }).addTo(this._map);
 
     this._intersects = L.layerGroup().addTo(this._map);
 
@@ -41,12 +44,19 @@ export default class App {
     this._info = document.querySelector('.info');
 
     this._tiles = L.tileLayer(
-      'https://api.mapbox.com/v4/' +
-      MAP_STYLE +
-      '/{z}/{x}/{y}.png?access_token=' +
-      config.api_token, {
-        attribution: 'Mapbox &copy; OSM contributors'
-    }).addTo(map);
+      'http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">' +
+                   'OpenStreetMap</a> contributors, &copy; ' +
+                   '<a href="http://cartodb.com/attributions">CartoDB</a>'
+    }).addTo(this._map);
+
+    // this._tiles = L.tileLayer(
+    //   'https://api.mapbox.com/v4/' +
+    //   MAP_STYLE +
+    //   '/{z}/{x}/{y}.png?access_token=' +
+    //   config.api_token, {
+    //     attribution: 'Mapbox &copy; OSM contributors'
+    // }).addTo(map);
 
     this._load(dataUrl);
 

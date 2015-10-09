@@ -3708,7 +3708,7 @@ body,
 .info {
   z-index: 1000;
   top: 15px;
-  right: 15px;
+  left: 15px;
   background: rgba(0, 0, 0, 0.5);
   position: absolute;
   padding: 10px;
