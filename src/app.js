@@ -10,6 +10,8 @@ import gjutils from 'geojson-utils';
 import geom from 'leaflet-geometryutil';
 import 'leaflet-hash';
 
+global.turf = turf;
+
 const MAP_STYLE = 'mapbox.dark';
 const LINE_WIDTH = 4;
 
@@ -20,13 +22,42 @@ const POSITION_STYLE = {
   radius: 6
 }
 
+function ringStyle(feature) {
+  return {
+    color: COLORS[feature.properties.id],
+    weight: LINE_WIDTH / (feature.properties.id + 1),
+    fillOpacity: 0.1,
+    clickable: false
+  };
+}
+
+function bufferStyle(feature) {
+  console.log(feature);
+  return {
+    color: COLORS[feature.properties.id] || '#00f',
+    weight: 1, //LINE_WIDTH / (feature.properties.id + 1),
+    fillOpacity: 0,
+    dashArray: [5, 5],
+    clickable: false
+  };
+}
+
 export default class App {
 
   constructor(mapContainer, dataUrl) {
 
+    let { center, zoom } = L.Hash.parseHash(location.hash);
+
     this._map = global.map = L.map(document.querySelector(mapContainer));
 
+    this._positioned = (center && zoom)
+    if (this._positioned) {
+      this._map.setView(center, zoom);
+    }
+
     this._intersects = L.layerGroup().addTo(this._map);
+
+    this._buffers = L.geoJson(null, { style: bufferStyle }).addTo(this._map);
 
     this._hash = L.hash(map);
 
@@ -40,13 +71,13 @@ export default class App {
 
     this._info = document.querySelector('.info');
 
-    this._tiles = L.tileLayer(
-      'https://api.mapbox.com/v4/' +
-      MAP_STYLE +
-      '/{z}/{x}/{y}.png?access_token=' +
-      config.api_token, {
-        attribution: 'Mapbox &copy; OSM contributors'
-    }).addTo(map);
+    // this._tiles = L.tileLayer(
+    //   'https://api.mapbox.com/v4/' +
+    //   MAP_STYLE +
+    //   '/{z}/{x}/{y}.png?access_token=' +
+    //   config.api_token, {
+    //     attribution: 'Mapbox &copy; OSM contributors'
+    // }).addTo(map);
 
     this._load(dataUrl);
 
@@ -66,18 +97,11 @@ export default class App {
         gjutils.centroid(f.geometry).coordinates;
     });
 
-    this._geojson = L.geoJson(data, {
-      style: (feature) => {
-        return {
-          color: COLORS[feature.properties.id],
-          weight: LINE_WIDTH / (feature.properties.id + 1),
-          fillOpacity: 0.1,
-          clickable: false
-        }
-      }
-    });
+    this._geojson = L.geoJson(data, { style: ringStyle });
 
-    map.fitBounds(this._geojson.getBounds(), {padding: [20, 20]});
+    if(!this._positioned) {
+      map.fitBounds(this._geojson.getBounds(), {padding: [20, 20]});
+    }
     this._geojson.addTo(map);
     this._index = leafletKnn(this._geojson);
   }
@@ -97,13 +121,12 @@ export default class App {
     }
     this._intersects.clearLayers();
 
-    L.Util.requestAnimFrame(() => {
-      this._calculateDistances(evt.latlng);
-    }, this);
+    L.Util.requestAnimFrame(() => this._calculateDistances(evt.latlng), this);
   }
 
   _calculateDistances(latlng) {
     let intersections = [];
+    let point = turf.point([latlng.lng, latlng.lat]);
     this._geojson.eachLayer((layer) => {
       let f = layer.feature;
       let centroid = L.latLng(f.properties.centroid.slice().reverse());
@@ -115,35 +138,68 @@ export default class App {
 
       if(intersects) {
         intersects = intersects.pop();
-        L.circleMarker(intersects.coordinates.slice(), {
+        intersects.coordinates.reverse();
+        L.circleMarker(intersects.coordinates.slice().reverse(), {
+          radius: 2,
+          color: COLORS[f.properties.id]
+        }); // .addTo(this._intersects);
+        intersects = turf.point(intersects.coordinates, { feature : f });
+        // intersections.push(intersects);
+      }
+
+      let nearest = turf.pointOnLine(
+        turf.linestring(f.geometry.coordinates[0]), point);
+      L.circleMarker(nearest.geometry.coordinates.slice().reverse(), {
           radius: 2,
           color: COLORS[f.properties.id]
         }).addTo(this._intersects);
-        intersects.feature = f;
-        intersections.push(intersects);
-      }
+      nearest.properties.feature = f;
+      intersections.push(nearest);
 
       // visual
       // L.polyline([latlng, centroid], {
       //   weight: 1
       // }).addTo(this._map);
-    }, this)
+    }, this);
 
     this._info.innerHTML = '<pre>' +
         JSON.stringify(intersections.map((i) => {
+          let distance = turf.distance(
+              point, turf.point(i.geometry.coordinates.slice()),
+              "kilometers"
+          );
+          if (turf.inside(point, i.properties.feature)) {
+            distance = -distance;
+          }
+          i.properties.distance = distance;
           return {
-            [i.feature.properties.name] :
-            turf.distance(
-              turf.point([latlng.lng, latlng.lat]),
-              turf.point(i.coordinates.slice().reverse())
-            ).toFixed(1) + ' km'
+            [i.properties.feature.properties.name] :
+              distance.toFixed(1) + ' km'
           }
         }), 0, 2) +
       '</pre>';
+
+    L.Util.requestAnimFrame(() => this._calculateBuffers(intersections), this);
+  }
+
+  _calculateBuffers(intersections) {
+    let buffers = [];
+    intersections.forEach((i) => {
+      if (i.properties.distance > 0) {
+        buffers = buffers.concat(
+          turf.buffer(
+            i.properties.feature,
+            i.properties.distance, 'kilometers').features
+          .map((f) => {
+            console.log(f);
+            f.properties.id = i.properties.feature.properties.id;
+            return f;
+          }));
+      }
+    });
+    buffers = turf.featurecollection(buffers);
+    this._buffers.clearLayers();
+    this._buffers.addData(buffers);
   }
 
 }
-
-
-
-
