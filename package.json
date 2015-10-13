@@ -47,12 +47,14 @@
   },
   "dependencies": {
     "geojson-utils": "^1.1.0",
+    "jsts": "^0.16.0",
     "leaflet": "^0.7.5",
     "leaflet-geometryutil": "^0.4.0",
     "leaflet-hash": "^0.2.1",
     "leaflet-knn": "^0.1.0",
     "spin.js": "^2.3.2",
     "topcoat": "^0.7.5",
+    "topojson": "^1.6.19",
     "turf": "^2.0.2",
     "xhr": "^2.1.0"
   },

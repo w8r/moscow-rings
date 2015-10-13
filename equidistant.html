@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body {
+  background: #fcfcfa;
+}
+
+.stroke {
+  fill: none;
+  stroke: #000;
+  stroke-width: 3px;
+}
+
+.fill {
+  fill: #fff;
+}
+
+.graticule {
+  fill: none;
+  stroke: #777;
+  stroke-width: .5px;
+  stroke-opacity: .5;
+}
+
+.land {
+  fill: #222;
+}
+
+.boundary {
+  fill: none;
+  stroke: #fff;
+  stroke-width: .5px;
+}
+
+</style>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/1.6.19/topojson.min.js"></script>
+<script src="https://cdn.rawgit.com/bjornharrtell/jsts/gh-pages/lib/0.16.0/javascript.util.min.js"></script>
+<script src="https://cdn.rawgit.com/bjornharrtell/jsts/gh-pages/lib/0.16.0/jsts.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.3.12/proj4.js"></script>
+<script>
+
+var width = 960,
+    height = 960;
+
+var m = [55.751849391735284, 37.61993408203125].reverse();
+console.log(m.map(function(c, i){ return i ? (90 - c) : (180 - c); }));
+
+var projection = d3.geo.azimuthalEquidistant()
+    .scale(150)
+    .rotate(m/*[74.0064, -40.7142]*/)
+    .clipAngle(180 - 1e-3)
+    .translate([width / 2, height / 2])
+    .precision(.1);
+
+var circle = d3.geo.circle()
+    .origin(m/*[-74.0064, 40.7142]*/);
+
+var path = d3.geo.path()
+    .projection(projection);
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+svg.append("defs").append("path")
+    .datum({type: "Sphere"})
+    .attr("id", "sphere")
+    .attr("d", path);
+
+svg.append("use")
+    .attr("class", "stroke")
+    .attr("xlink:href", "#sphere");
+
+svg.append("use")
+    .attr("class", "fill")
+    .attr("xlink:href", "#sphere");
+
+svg.append("g")
+    .attr("class", "graticule")
+  .selectAll("path")
+    .data(d3.range(10, 190, 10).map(function(d) { return circle.angle(d)(); }))
+  .enter().append("path")
+    .attr("d", path);
+
+d3.json("data/world.json", function(error, world) {
+  var json = world;
+  if (error) throw error;
+
+  svg.insert("path", ".graticule")
+      .datum(json)
+      .attr("class", "land")
+      .attr("d", path);
+
+  // svg.insert("path", ".graticule")
+  //     .datum(topojson.mesh(world, world.objects.countries, function(a, b) { return a !== b; }))
+  //     .attr("class", "boundary")
+  //     .attr("d", path);
+});
+
+d3.select(self.frameElement).style("height", height + "px");
+
+</script>

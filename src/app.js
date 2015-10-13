@@ -9,6 +9,8 @@ import turf from 'turf';
 import gjutils from 'geojson-utils';
 import geom from 'leaflet-geometryutil';
 import 'leaflet-hash';
+import crs from './projection';
+import { project, unproject, buffer } from './geojson';
 
 global.turf = turf;
 
@@ -22,6 +24,13 @@ const POSITION_STYLE = {
   radius: 6
 }
 
+function sdistance (latlon1, latlon2, crs) {
+  let p1 = crs.project(latlon1);
+  let p2 = crs.project(latlon2);
+
+  return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+}
+
 function ringStyle(feature) {
   return {
     color: COLORS[feature.properties.id],
@@ -32,10 +41,9 @@ function ringStyle(feature) {
 }
 
 function bufferStyle(feature) {
-  console.log(feature);
   return {
     color: COLORS[feature.properties.id] || '#00f',
-    weight: 1, //LINE_WIDTH / (feature.properties.id + 1),
+    weight: 2, //LINE_WIDTH / (feature.properties.id + 1),
     fillOpacity: 0,
     dashArray: [5, 5],
     clickable: false
@@ -109,6 +117,14 @@ export default class App {
 
     this._geojson = L.geoJson(data, { style: ringStyle });
 
+    //console.time('proj');
+    this._projected = project(data, this._map.options.crs);
+    //console.timeEnd('proj');
+
+    //console.time('unproj');
+    //let unprojected = unproject(projected, this._map.options.crs);
+    //console.timeEnd('unproj');
+
     if(!this._positioned) {
       map.fitBounds(this._geojson.getBounds(), {padding: [20, 20]});
     }
@@ -178,10 +194,24 @@ export default class App {
               point, turf.point(i.geometry.coordinates.slice()),
               "kilometers"
           );
+          let sqdistance = sdistance(
+            L.latLng(i.geometry.coordinates.slice().reverse()),
+            L.latLng(point.geometry.coordinates.slice().reverse()),
+            map.options.crs
+          ) / 1000;
+
+          let ldistance = L.latLng(i.geometry.coordinates.slice().reverse())
+            .distanceTo(L.latLng(point.geometry.coordinates.slice().reverse())) / 1000;
+
+          console.log(distance, sqdistance, ldistance);
+          //distance = sqdistance;
+          //distance = ldistance;
+
           if (turf.inside(point, i.properties.feature)) {
             distance = -distance;
           }
           i.properties.distance = distance;
+
           return {
             [i.properties.feature.properties.name] :
               distance.toFixed(1) + ' km'
@@ -194,20 +224,24 @@ export default class App {
 
   _calculateBuffers(intersections) {
     let buffers = [];
-    intersections.forEach((i) => {
+    intersections.forEach((i, index) => {
       if (i.properties.distance > 0) {
+        let projectedFeature = this._projected.features[index];
+        let feature = i.properties.feature;
+        console.log(projectedFeature.properties.name, feature.properties.name, i.properties.distance * 1000);
         buffers = buffers.concat(
-          turf.buffer(
-            i.properties.feature,
-            i.properties.distance, 'kilometers').features
+          buffer(
+            projectedFeature,
+            i.properties.distance * 2000
+          ).features
           .map((f) => {
-            console.log(f);
             f.properties.id = i.properties.feature.properties.id;
             return f;
           }));
       }
-    });
+    }, this);
     buffers = turf.featurecollection(buffers);
+    buffers = unproject(buffers, map.options.crs);
     this._buffers.clearLayers();
     this._buffers.addData(buffers);
   }
