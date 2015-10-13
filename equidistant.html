@@ -1,9 +1,16 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
+<head>
 <style>
 
 body {
   background: #fcfcfa;
+}
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .stroke {
@@ -24,7 +31,16 @@ body {
 }
 
 .land {
-  fill: #222;
+  fill: #ddd;
+  stroke: #888;
+}
+
+.ring {
+  stroke: #ff0000;
+  stroke-width: 1px;
+  stroke-opacity: .5;
+  fill-opacity: 0;
+  z-index: 50;
 }
 
 .boundary {
@@ -34,6 +50,7 @@ body {
 }
 
 </style>
+</head>
 <body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/1.6.19/topojson.min.js"></script>
@@ -42,16 +59,20 @@ body {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.3.12/proj4.js"></script>
 <script>
 
-var width = 960,
-    height = 960;
+var w = window,
+    d = document,
+    e = d.documentElement,
+    g = d.getElementsByTagName('body')[0],
+    width = w.innerWidth || e.clientWidth || g.clientWidth,
+    height = w.innerHeight|| e.clientHeight|| g.clientHeight;
 
 var m = [55.751849391735284, 37.61993408203125].reverse();
-console.log(m.map(function(c, i){ return i ? (90 - c) : (180 - c); }));
 
+var scale = 150;
 var projection = d3.geo.azimuthalEquidistant()
-    .scale(150)
-    .rotate(m/*[74.0064, -40.7142]*/)
-    .clipAngle(180 - 1e-3)
+    .scale(500 * scale)
+    .rotate(m.map(function(c) { return -c; })/*[74.0064, -40.7142]*/)
+    .clipAngle(90)
     .translate([width / 2, height / 2])
     .precision(.1);
 
@@ -81,11 +102,11 @@ svg.append("use")
 svg.append("g")
     .attr("class", "graticule")
   .selectAll("path")
-    .data(d3.range(10, 190, 10).map(function(d) { return circle.angle(d)(); }))
+    .data(d3.range(0.05, 2, 0.05).map(function(d) { return circle.angle(d)(); }))
   .enter().append("path")
     .attr("d", path);
 
-d3.json("data/world.json", function(error, world) {
+d3.json("data/world_simplified.json", function(error, world) {
   var json = world;
   if (error) throw error;
 
@@ -94,12 +115,14 @@ d3.json("data/world.json", function(error, world) {
       .attr("class", "land")
       .attr("d", path);
 
-  // svg.insert("path", ".graticule")
-  //     .datum(topojson.mesh(world, world.objects.countries, function(a, b) { return a !== b; }))
-  //     .attr("class", "boundary")
-  //     .attr("d", path);
-});
+  d3.json("data/data.json", function(error, rings) {
+    if (error) throw error;
+    svg.insert("path", ".graticule")
+      .datum(rings)
+      .attr('class', 'ring')
+      .attr("d", path);
+  });
 
-d3.select(self.frameElement).style("height", height + "px");
+});
 
 </script>
