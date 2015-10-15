@@ -3,8 +3,13 @@ const L = global.L || require('leaflet');
 import d3 from 'd3';
 
 const EARTH_RADIUS =  6378137;
+const MOSCOW_LAT_LNG = [55.751849391735284, 37.61993408203125];
 
-const d3Equidistant = d3.geo.azimuthalEquidistant().scale(EARTH_RADIUS);
+const d3Equidistant = d3.geo.azimuthalEquidistant();
+
+export const moscowEquidistant = d3Equidistant
+  .rotate(MOSCOW_LAT_LNG.map((c) => -c).reverse())
+  .scale(EARTH_RADIUS);
 
 L.CRS.EPSG3857.unproject = function (point) {
   return this.projection.unproject(
@@ -15,22 +20,22 @@ L.CRS.EPSG3857.unproject = function (point) {
 export let abstractEquidistant = {
 
   project(coords) {
-    return d3Equidistant(coords);
+    return moscowEquidistant(coords);
   },
 
   unproject(coords) {
-    return d3Equidistant.invert(coords);
+    return moscowEquidistant.invert(coords);
   }
 }
 
 export let equidistant = {
 
   project (latlng) {
-    return L.point(d3Equidistant([latlng.lng, latlng.lat]));
+    return L.point(moscowEquidistant([latlng.lng, latlng.lat]));
   },
 
   unproject (point) {
-    return L.latLng(d3Equidistant.invert([point.x, point.y]).reverse())
+    return L.latLng(moscowEquidistant.invert([point.x, point.y]).reverse())
   }
 };
 
