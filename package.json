@@ -46,16 +46,20 @@
     "watchify": "^3.4.0"
   },
   "dependencies": {
+    "d3": "^3.5.6",
+    "d3-geo-azimuthal-equidistant": "0.0.0",
     "geojson-utils": "^1.1.0",
     "jsts": "^0.16.0",
     "leaflet": "^0.7.5",
     "leaflet-geometryutil": "^0.4.0",
     "leaflet-hash": "^0.2.1",
     "leaflet-knn": "^0.1.0",
+    "polygon": "^1.0.2",
     "spin.js": "^2.3.2",
     "topcoat": "^0.7.5",
     "topojson": "^1.6.19",
     "turf": "^2.0.2",
+    "vec2": "^1.6.0",
     "xhr": "^2.1.0"
   },
   "homepage": "https://github.com/w8r/moscow-rings#readme"
