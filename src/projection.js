@@ -40,3 +40,10 @@ export let equidistant = {
 };
 
 export let EPSG3857 = L.CRS.EPSG3857;
+
+export function projectedDistance (latlon1, latlon2, crs) {
+  let p1 = crs.project(latlon1);
+  let p2 = crs.project(latlon2);
+
+  return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+}
