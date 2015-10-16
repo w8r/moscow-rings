@@ -194,10 +194,7 @@ export default class App {
       //   nearestStyle(f.properties.id)
       // ).addTo(this._intersects);
 
-      L.circleMarker(nearest.geometry.coordinates.slice().reverse(), {
-          radius: 2,
-          color: COLORS[f.properties.id]
-      }).addTo(this._intersects);
+
 
       enearest.properties.feature = ef;
 
@@ -207,6 +204,19 @@ export default class App {
       let distance = turf.distance(point, nearest, "kilometers");
       let edistance = euclidianDistance(
         enearest.geometry.coordinates, epoint.geometry.coordinates);
+
+      if (turf.inside(point, f)) {
+        distance = -distance;
+        edistance = -edistance;
+        this._state[f.properties.id] = false;
+      } else {
+        this._state[f.properties.id] = true;
+      }
+
+      L.circleMarker(nearest.geometry.coordinates.slice().reverse(), {
+        radius: 2,
+        color: COLORS[f.properties.id]
+      }).addTo(this._intersects);
 
       return {
         feature: ef,
@@ -232,13 +242,13 @@ export default class App {
       return L.Util.template('<li data-feature-id="{id}">' +
         '<label class="topcoat-checkbox">' +
         '<input type="checkbox" data-feature-id="{id}" {checked}> ' +
-        '<span class="distance">{distance}km</span>' +
+        '<span class="distance">{distance} km</span>' +
         '<span class="name">{name}</span>' +
         '</label></li>', {
           checked: this._state[feature.properties.id] ? 'checked': '',
           id: feature.properties.id,
           name: feature.properties.name,
-          distance: measure.distance.toFixed(2)
+          distance: Math.abs(measure.distance).toFixed(2)
         });
     }).join('') + '</ul>';
     this._info.innerHTML = html;
@@ -252,7 +262,7 @@ export default class App {
     let buffers = [];
 
     measures.forEach((measure, index) => {
-      if (measure.distance > 0) {
+      if (measure.distance !== 0) {
         let projectedFeature = measure.feature;
 
         buffers = buffers.concat(buffer(
