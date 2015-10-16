@@ -80,9 +80,11 @@ function compile(watch) {
     } else {
       stream
          .pipe(uglify())
+         .pipe(rename('app.js'))
          .pipe(sourcemaps.write('.'))
          .pipe(gulp.dest('./build'));
     }
+    return stream;
   }
 
   if (watch) {
@@ -98,7 +100,7 @@ function compile(watch) {
       });
   }
 
-  rebundle();
+  return rebundle();
 }
 
 function watch() {
@@ -110,7 +112,7 @@ gulp.task('build', function() {
 });
 
 gulp.task('scripts', function() {
-  bundleApp(true);
+  return bundleApp(true);
 });
 
 gulp.task('watch', function() {

@@ -4,13 +4,13 @@ import xhr from 'xhr';
 import * as Spinner from 'spin.js';
 import * as config from '../config.json';
 import { ringStyle, bufferStyle, POSITION_STYLE, nearestStyle, COLORS } from './styles';
-import { euclidianDistance } from './utils';
+import { euclidianDistance, nearestPoint, planarNearestPoint } from './utils';
 
 import turf from 'turf';
 import gjutils from 'geojson-utils';
 import geom from 'leaflet-geometryutil';
 import 'leaflet-hash';
-import { EPSG3857, equidistant, abstractEquidistant } from './projection';
+import { EPSG3857, moscowEquidistant, MOSCOW_BBOX } from './projection';
 import { project, unproject, buffer } from './geojson';
 import Polygon from 'polygon';
 import Vec2 from 'vec2';
@@ -43,6 +43,12 @@ export default class App {
 
     this._data = null;
 
+    this._bufferData = null;
+
+    this._state = {};
+
+    this._equidistant = null;
+
     this._geojson = null;
 
     this._index = null;
@@ -69,49 +75,87 @@ export default class App {
     this._load(dataUrl);
   }
 
+  /**
+   * @param  {String} url
+   */
   _load(url) {
     xhr({ url }, this._onLoad.bind(this));
   }
 
-  _onLoad(err, req, data) {
-    if (err) throw new Error('failed to fetch data');
-
+  /**
+   * @param  {Object} data
+   */
+  _processData(data) {
+    function storeCentroid(f) {
+      f.properties.centroid = turf.centroid(f).geometry.coordinates;
+    };
     this._data = data = JSON.parse(data);
-    data.features.forEach((f) => {
-      f.properties.centroid =
-        gjutils.centroid(f.geometry).coordinates;
-    });
+    data.features.forEach(storeCentroid, this);
+
+    data.features.forEach((feature) => {
+      this._state[feature.properties.id] = true;
+    }, this);
 
     this._geojson = L.geoJson(data, { style: ringStyle });
 
     console.time('proj');
-    this._equidistant = project(data, equidistant);
-
-    this._equidistant.features.forEach((f) => {
-      f.properties.centroid =
-        gjutils.centroid(f.geometry).coordinates;
-    });
+    this._equidistant = project(data, moscowEquidistant);
+    this._equidistant.features.forEach(storeCentroid, this);
     console.timeEnd('proj');
+  }
 
-    //console.time('unproj');
-    //let unprojected = unproject(projected, this._map.options.crs);
-    //console.timeEnd('unproj');
+  /**
+   * @param  {Object|Null} err
+   * @param  {Request}     req
+   * @param  {Object}      data
+   */
+  _onLoad(err, req, data) {
+    if (err) throw new Error('failed to fetch data');
+
+    this._processData(data);
 
     if (!this._positioned) {
       map.fitBounds(this._geojson.getBounds(), {
         padding: [20, 20]
       });
     }
+
     this._geojson.addTo(map);
     this._init();
   }
 
+  /**
+   * Init handlers
+   */
   _init() {
     this._map.on('click', this._onMapClick, this);
-    // let nearest = index.nearest(evt.latlng);
-    // console.log(nearest);
+    L.DomEvent.on(this._info, 'click', (evt) => {
+      if (evt.target.tagName.toLowerCase() === 'input') {
+        L.Util.requestAnimFrame(() => {
+          let id = evt.target.getAttribute('data-feature-id');
+          this._state[id] = !!evt.target.checked;
+          this._renderBuffers();
+        }, this);
+      }
+    }, this);
+
+    navigator.geolocation.getCurrentPosition(L.Util.bind((position) => {
+      var latlng = L.latLng(position.coords.latitude,
+          position.coords.longitude);
+      if(L.latLngBounds(
+        MOSCOW_BBOX.slice(0,2).reverse(),
+        MOSCOW_BBOX.slice(2).reverse()
+      ).contains(latlng)) {
+        this._onMapClick({
+          latlng: latlng
+        });
+      }
+    }, this));
   }
 
+  /**
+   * @param  {Object} evt
+   */
   _onMapClick(evt) {
     if (!this._marker) {
       this._marker = L.circleMarker(evt.latlng, POSITION_STYLE)
@@ -124,110 +168,125 @@ export default class App {
     L.Util.requestAnimFrame(() => this._calculateDistances(evt.latlng), this);
   }
 
+  /**
+   * @param  {L.LatLng} latlng
+   * @return {Array.<Object>}
+   */
   _calculateDistances(latlng) {
     let intersections = [];
     let eintersections = [];
+
     let point = turf.point([latlng.lng, latlng.lat]);
-    let epoint = turf.point(abstractEquidistant.project([latlng.lng, latlng.lat]));
+    let epoint = turf.point(moscowEquidistant.project([latlng.lng, latlng.lat]));
 
-    console.log('you clicked', JSON.stringify(epoint));
-
-    this._geojson.eachLayer((layer) => {
-      let f = layer.feature;
+    var measures = this._data.features.map((feature, index) => {
+      let f = feature;
       let ef = this._equidistant.features.filter((e) => {
         return e.properties.id === f.properties.id;
       })[0];
 
 
-      let nearest = turf.pointOnLine(
-        turf.linestring(f.geometry.coordinates[0]), point);
+      let nearest = nearestPoint(point, f);
+      let enearest = planarNearestPoint(epoint, ef);
 
-      let epolygon = new Polygon(ef.geometry.coordinates[0]);
-      let enearest = new Polygon(ef.geometry.coordinates[0])
-         .closestPointTo(Vec2.apply(null, epoint.geometry.coordinates)).toArray();
-
-      L.circleMarker(
-        abstractEquidistant.unproject(enearest).slice().reverse(),
-        nearestStyle(f.properties.id)
-      ).addTo(this._intersects);
-
-      enearest = turf.point(enearest);
+      // L.circleMarker(
+      //   moscowEquidistant.unproject(enearest.geometry.coordinates).slice().reverse(),
+      //   nearestStyle(f.properties.id)
+      // ).addTo(this._intersects);
 
       L.circleMarker(nearest.geometry.coordinates.slice().reverse(), {
           radius: 2,
           color: COLORS[f.properties.id]
-        }).addTo(this._intersects);
+      }).addTo(this._intersects);
 
-      nearest.properties.feature = f;
       enearest.properties.feature = ef;
 
       intersections.push(nearest);
       eintersections.push(enearest);
 
-      // visual
-      // L.polyline([latlng, centroid], {
-      //   weight: 1
-      // }).addTo(this._map);
+      let distance = turf.distance(point, nearest, "kilometers");
+      let edistance = euclidianDistance(
+        enearest.geometry.coordinates, epoint.geometry.coordinates);
+
+      return {
+        feature: ef,
+        distance,
+        radius: edistance
+      };
     }, this);
 
-    this._info.innerHTML = '<pre>' +
-        JSON.stringify(intersections.map((i, index) => {
-          let distance = turf.distance(
-              point, turf.point(i.geometry.coordinates.slice()),
-              "kilometers"
-          );
+    this._showInfo(measures);
 
-          let ldistance = L.latLng(i.geometry.coordinates.slice().reverse())
-            .distanceTo(L.latLng(point.geometry.coordinates.slice().reverse())) / 1000;
-
-          let edistance = euclidianDistance(
-            eintersections[index].geometry.coordinates,
-            epoint.geometry.coordinates);
-
-          if (turf.inside(point, i.properties.feature)) {
-            distance = -distance;
-            edistance = -edistance;
-          }
-          i.properties.distance = distance;
-          eintersections[index].properties.distance = edistance;
-
-
-          return {
-            [i.properties.feature.properties.name] :
-              distance.toFixed(1) + ' km'
-          }
-        }), 0, 2) +
-      '</pre>';
-
-    L.Util.requestAnimFrame(() => this._calculateBuffers(eintersections), this);
+    L.Util.requestAnimFrame(() => {
+      this._showBuffers(this._calculateBuffers(measures));
+    }, this);
   }
 
-  _calculateBuffers(intersections) {
+  /**
+   * @param  {Array/<Object>} measures
+   */
+  _showInfo(measures) {
+    let html = '';
+    html = '<ul>' + measures.map((measure) => {
+      var feature = measure.feature;
+      return L.Util.template('<li data-feature-id="{id}">' +
+        '<label class="topcoat-checkbox">' +
+        '<input type="checkbox" data-feature-id="{id}" {checked}> ' +
+        '<span class="distance">{distance}km</span>' +
+        '<span class="name">{name}</span>' +
+        '</label></li>', {
+          checked: this._state[feature.properties.id] ? 'checked': '',
+          id: feature.properties.id,
+          name: feature.properties.name,
+          distance: measure.distance.toFixed(2)
+        });
+    }).join('') + '</ul>';
+    this._info.innerHTML = html;
+  }
+
+  /**
+   * @param  {Array.<Object>} measures
+   * @return {Object}
+   */
+  _calculateBuffers(measures) {
     let buffers = [];
 
-    intersections.forEach((i, index) => {
-      if (i.properties.distance > 0) {
-        let feature = i.properties.feature;
-        let projectedFeature = this._equidistant.features[index];
+    measures.forEach((measure, index) => {
+      if (measure.distance > 0) {
+        let projectedFeature = measure.feature;
 
-        buffers = buffers.concat(
-          buffer(
+        buffers = buffers.concat(buffer(
              projectedFeature,
-             intersections[index].properties.distance
+             measure.radius
            ).features
           .map((f) => {
-             f.properties.id = i.properties.feature.properties.id;
+             f.properties.id = projectedFeature.properties.id;
              return f;
         }));
       }
     }, this);
 
-    buffers = turf.featurecollection(buffers);
-    buffers = unproject(buffers, equidistant);
+    return unproject(turf.featurecollection(buffers), moscowEquidistant);
+  }
 
+  /**
+   * @param  {Object} buffers
+   */
+  _showBuffers(buffers) {
+    this._bufferData = buffers;
+    this._renderBuffers();
+  }
 
+  _renderBuffers() {
+    let buffers = this._bufferData;
     this._buffers.clearLayers();
-    this._buffers.addData(buffers);
+    if (!buffers) return;
+
+    buffers.features.forEach((feature) => {
+      if (this._state[feature.properties.id]) {
+        this._buffers.addData(feature);
+      }
+    }, this);
   }
 
 }

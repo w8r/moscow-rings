@@ -2,6 +2,8 @@ const L = global.L || require('leaflet');
 import jsts from 'jsts';
 import turf from 'turf';
 
+const QUADRANT_SEGMENTS = 18;
+
 export function buffer(feature, radius){
   if(feature.type === 'FeatureCollection'){
     let multi = turf.combine(feature);
@@ -16,7 +18,7 @@ export function buffer(feature, radius){
 function _buffer(feature, radius) {
   const reader = new jsts.io.GeoJSONReader();
   const geom = reader.read(JSON.stringify(feature.geometry));
-  let buffered = geom.buffer(radius);
+  let buffered = geom.buffer(radius, QUADRANT_SEGMENTS);
   let parser = new jsts.io.GeoJSONParser();
 
   buffered = parser.write(buffered);
@@ -44,10 +46,16 @@ function _buffer(feature, radius) {
  */
 export function unproject (data, crs) {
   data = JSON.parse(JSON.stringify(data));
-  return _project(data, (coords) => {
-    let latlng = crs.unproject.call(crs, L.point(coords[0], coords[1]));
-    return [latlng.lng, latlng.lat];
-  });
+  if (crs.raw) {
+    return _project(data, (coords) => {
+      return crs.unproject.call(crs, coords);
+    });
+  } else {
+    return _project(data, (coords) => {
+      let latlng = crs.unproject.call(crs, L.point(coords[0], coords[1]));
+      return [latlng.lng, latlng.lat];
+    });
+  }
 }
 
 /**
@@ -57,10 +65,16 @@ export function unproject (data, crs) {
  */
 export function project (data, crs) {
   data = JSON.parse(JSON.stringify(data));
-  return _project(data, (coords) => {
-    let pt = crs.project.call(crs, L.latLng(coords.slice().reverse()));
-    return [pt.x, pt.y];
-  });
+  if (crs.raw) {
+    return _project(data, (coords) => {
+      return crs.project.call(crs, coords);
+    });
+  } else {
+    return _project(data, (coords) => {
+      let pt = crs.project.call(crs, L.latLng(coords.slice().reverse()));
+      return [pt.x, pt.y];
+    });
+  }
 }
 
 /**
