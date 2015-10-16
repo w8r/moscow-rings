@@ -17,7 +17,7 @@ will maybe end up with something like that:
 
 ![rings](https://cloud.githubusercontent.com/assets/26884/10547868/3a09e65c-7437-11e5-9bd7-7fc4cae8d1cc.png)
 
-**Rings do not intersect at given point as they should! WHY?!*. Exactly, they 
+**Rings do not intersect at given point as they should! WHY?!**. Exactly, they 
 don't, cause your projection is discrete, that means that you simply cannot
 perform geometrical operations like offsetting in it, distances will alway be 
 wrong.
