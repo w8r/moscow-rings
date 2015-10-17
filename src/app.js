@@ -243,8 +243,9 @@ export default class App {
         '<label class="topcoat-checkbox">' +
         '<input type="checkbox" data-feature-id="{id}" {checked}> ' +
         '<span class="distance">{distance} km</span>' +
-        '<span class="name">{name}</span>' +
+        '<span class="name" style="color: {color}">{name}</span>' +
         '</label></li>', {
+          color: COLORS[feature.properties.id],
           checked: this._state[feature.properties.id] ? 'checked': '',
           id: feature.properties.id,
           name: feature.properties.name,
