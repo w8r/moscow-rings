@@ -14,6 +14,11 @@ import { EPSG3857, moscowEquidistant, MOSCOW_BBOX } from './projection';
 import { project, unproject, buffer } from './geojson';
 import Polygon from 'polygon';
 import Vec2 from 'vec2';
+import mapquest from 'mapquest-api';
+
+console.log(mapquest);
+
+import Search from './search';
 
 global.turf = turf;
 
@@ -55,7 +60,7 @@ export default class App {
 
     this._marker = null;
 
-    this._info = document.querySelector('.info');
+    this._info = document.querySelector('.info .container');
 
     this._tiles = L.tileLayer(
       'http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
@@ -72,6 +77,7 @@ export default class App {
     //     attribution: 'Mapbox &copy; OSM contributors'
     // }).addTo(map);
 
+    this._search = new Search(document.querySelector('.search'));
     this._load(dataUrl);
   }
 
@@ -86,12 +92,14 @@ export default class App {
    * @param  {Object} data
    */
   _processData(data) {
+    // add centroid
     function storeCentroid(f) {
       f.properties.centroid = turf.centroid(f).geometry.coordinates;
     };
     this._data = data = JSON.parse(data);
     data.features.forEach(storeCentroid, this);
 
+    // show all rings
     data.features.forEach((feature) => {
       this._state[feature.properties.id] = true;
     }, this);
@@ -208,9 +216,6 @@ export default class App {
       if (turf.inside(point, f)) {
         distance = -distance;
         edistance = -edistance;
-        this._state[f.properties.id] = false;
-      } else {
-        this._state[f.properties.id] = true;
       }
 
       L.circleMarker(nearest.geometry.coordinates.slice().reverse(), {
@@ -288,6 +293,9 @@ export default class App {
     this._renderBuffers();
   }
 
+  /**
+   * Render buffers to the map
+   */
   _renderBuffers() {
     let buffers = this._bufferData;
     this._buffers.clearLayers();
