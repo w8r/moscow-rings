@@ -97,7 +97,7 @@ body {
   -o-transition: all 0.25s cubic-bezier(0.46, 0.01, 0.2, 1.31) 0s;
   transition: all 0.25s cubic-bezier(0.46, 0.01, 0.2, 1.31) 0s;
   white-space: nowrap;
-  opacity: 0;
+  opacity: 0.5;
   z-index: 2;
   position: absolute;
   font-size: 0;
@@ -111,6 +111,7 @@ body {
   -o-transform: translate(4px, -4px);
   transform: translate(4px, -4px);
   position: relative;
+  z-index: 4;
   font: inherit;
   font-size: 15px;
   display: inline-block;
@@ -256,7 +257,6 @@ body {
   top: 12px;
 }
 .info .search.submitted input[type="text"] {
-  pointer-events: none;
   -webkit-transform: translate(0, -2px);
   -ms-transform: translate(0, -2px);
   -o-transform: translate(0, -2px);

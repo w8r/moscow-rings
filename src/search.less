@@ -174,7 +174,7 @@ html, body {
       .transform-origin(~'top left');
       .transition(~'all 0.25s cubic-bezier(0.46, 0.01, 0.2, 1.31) 0s');
       white-space: nowrap;
-      opacity: 0;
+      opacity: 0.5;
       z-index: 2;
       position: absolute;
       font-size: 0;
@@ -185,6 +185,7 @@ html, body {
       span {
         .translate(4px, -4px);
         position: relative;
+        z-index: 4;
         font: inherit;
         font-size: 15px;
         display: inline-block;
@@ -321,7 +322,6 @@ html, body {
       }
 
       input[type="text"] {
-        pointer-events: none;
         .translate(0, -2px);
         opacity: 1;
         font-size: 33px;

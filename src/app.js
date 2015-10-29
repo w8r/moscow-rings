@@ -14,7 +14,7 @@ import { EPSG3857, moscowEquidistant, MOSCOW_BBOX } from './projection';
 import { project, unproject, buffer } from './geojson';
 import Polygon from 'polygon';
 import Vec2 from 'vec2';
-import mapquest from 'mapquest-api';
+import mapquest from 'mapquest';
 
 console.log(mapquest);
 
@@ -23,6 +23,10 @@ import Search from './search';
 global.turf = turf;
 
 const MAP_STYLE = 'mapbox.dark';
+const MOSCOW_BOUNDS = L.latLngBounds(
+  MOSCOW_BBOX.slice(0,2).reverse(),
+  MOSCOW_BBOX.slice(2).reverse()
+);
 
 export default class App {
 
@@ -77,8 +81,23 @@ export default class App {
     //     attribution: 'Mapbox &copy; OSM contributors'
     // }).addTo(map);
 
-    this._search = new Search(document.querySelector('.search'));
+    this._search = new Search(document.querySelector('.search'))
+      .on('submit', this._onSearch, this);
     this._load(dataUrl);
+  }
+
+  _onSearch(e) {
+    mapquest.geocode({
+      address: e.query,
+      key: config.mapquest_api_key
+    }, (err, location) => {
+      if (!err) {
+        let latlng = L.latLng(location.latLng.lat, location.latLng.lng);
+        if (MOSCOW_BOUNDS.contains(latlng)) {
+          this._setPoint(latlng);
+        }
+      }
+    });
   }
 
   /**
@@ -150,13 +169,8 @@ export default class App {
     navigator.geolocation.getCurrentPosition(L.Util.bind((position) => {
       var latlng = L.latLng(position.coords.latitude,
           position.coords.longitude);
-      if(L.latLngBounds(
-        MOSCOW_BBOX.slice(0,2).reverse(),
-        MOSCOW_BBOX.slice(2).reverse()
-      ).contains(latlng)) {
-        this._onMapClick({
-          latlng: latlng
-        });
+      if(MOSCOW_BOUNDS.contains(latlng)) {
+        this._setPoint(latlng);
       }
     }, this));
   }
@@ -165,15 +179,30 @@ export default class App {
    * @param  {Object} evt
    */
   _onMapClick(evt) {
+    this._setPoint(evt.latlng);
+    mapquest.reverse({
+      coordinates: {
+        latitude: evt.latlng.lat,
+        longitude: evt.latlng.lng
+      },
+      key: config.mapquest_api_key
+    }, (err, location) => {
+      if (!err) {
+        this._search.setValue(location.street);
+      }
+    })
+  }
+
+  _setPoint(latlng) {
     if (!this._marker) {
-      this._marker = L.circleMarker(evt.latlng, POSITION_STYLE)
+      this._marker = L.circleMarker(latlng, POSITION_STYLE)
         .addTo(this._map);
     } else {
-      this._marker.setLatLng(evt.latlng);
+      this._marker.setLatLng(latlng);
     }
     this._intersects.clearLayers();
 
-    L.Util.requestAnimFrame(() => this._calculateDistances(evt.latlng), this);
+    L.Util.requestAnimFrame(() => this._calculateDistances(latlng), this);
   }
 
   /**
