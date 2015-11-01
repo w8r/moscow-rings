@@ -19,13 +19,14 @@ html, body, .map {
     padding: 10px;
     width: 260px;
 
+    min-height: 150px;
     max-height: 70%;
     overflow-y: auto;
     border: 1px solid rgba(255,255,255,0.5);
 
     color: #dfdfdf;
     font-size: 11px;
-    font-family: 'Roboto', sans-serif;
+    font-family: 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 
     ul {
 	    padding: 0;
@@ -46,6 +47,15 @@ html, body, .map {
 	            margin-top: 5px;
 	        }
 	    }
+	}
+
+	.search-loading { display: none; }
+
+	&.loading {
+		.search-loading { display: block; }
+		.container {
+			opacity: 0.5;
+		}
 	}
 
     .nav {
@@ -102,3 +112,19 @@ html, body, .map {
 }
 
 @import "search.less";
+
+.address-tooltip {
+
+  a.leaflet-popup-close-button,
+  .leaflet-popup-content {
+    font-size: 15px;
+    font-family: 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: #dfdfdf;
+    font-weight: 300;
+  }
+
+  .leaflet-popup-tip,
+  .leaflet-popup-content-wrapper {
+    background: rgba(0,0,0, 0.5);
+  }
+}

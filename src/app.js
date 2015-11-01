@@ -28,6 +28,11 @@ const MOSCOW_BOUNDS = L.latLngBounds(
   MOSCOW_BBOX.slice(2).reverse()
 );
 
+const locale = config.l10n[navigator.language || navigator.userLanguage] ||
+  config.l10n.all;
+
+console.log(locale);
+
 export default class App {
 
   constructor(mapContainer, dataUrl) {
@@ -64,7 +69,9 @@ export default class App {
 
     this._marker = null;
 
-    this._info = document.querySelector('.info .container');
+    this._container = document.querySelector('.info');
+
+    this._info = this._container.querySelector('.container');
 
     this._tiles = L.tileLayer(
       'http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
@@ -81,7 +88,7 @@ export default class App {
     //     attribution: 'Mapbox &copy; OSM contributors'
     // }).addTo(map);
 
-    this._search = new Search(document.querySelector('.search'))
+    this._search = new Search(document.querySelector('.searchbox'))
       .on('submit', this._onSearch, this);
     this._load(dataUrl);
   }
@@ -89,12 +96,18 @@ export default class App {
   _onSearch(e) {
     mapquest.geocode({
       address: e.query,
-      key: config.mapquest_api_key
+      key: config.mapquest_api_key,
+      boundingBox: MOSCOW_BBOX,
+      thumbMaps: false,
+      "geocodeQuality": "ADDRESS"
     }, (err, location) => {
       if (!err) {
         let latlng = L.latLng(location.latLng.lat, location.latLng.lng);
         if (MOSCOW_BOUNDS.contains(latlng)) {
           this._setPoint(latlng);
+          if (!this._map.getBounds().contains(latlng)) {
+            this._map.panTo(latlng);
+          }
         }
       }
     });
@@ -104,6 +117,7 @@ export default class App {
    * @param  {String} url
    */
   _load(url) {
+    this._setLoading();
     xhr({ url }, this._onLoad.bind(this));
   }
 
@@ -148,6 +162,7 @@ export default class App {
     }
 
     this._geojson.addTo(map);
+    this._setReady();
     this._init();
   }
 
@@ -166,29 +181,58 @@ export default class App {
       }
     }, this);
 
+    this._setLoading();
     navigator.geolocation.getCurrentPosition(L.Util.bind((position) => {
       var latlng = L.latLng(position.coords.latitude,
           position.coords.longitude);
-      if(MOSCOW_BOUNDS.contains(latlng)) {
+
+      this._setReady();
+      if (MOSCOW_BOUNDS.contains(latlng)) {
         this._setPoint(latlng);
-      }
+      } else this._showEmpty();
     }, this));
+
+  }
+
+  _showEmpty() {
+    this._showInfo(this._data.features.map((feature) => {
+      return {
+        feature,
+        distance: '?'
+      }
+    }));
+  }
+
+  _setLoading() {
+    L.DomUtil.addClass(this._container, 'loading');
+  }
+
+  _setReady() {
+    L.DomUtil.removeClass(this._container, 'loading');
   }
 
   /**
    * @param  {Object} evt
    */
   _onMapClick(evt) {
-    this._setPoint(evt.latlng);
+    let latlng = evt.latlng;
+
+    this._setPoint(latlng);
+
+    this._setLoading();
     mapquest.reverse({
       coordinates: {
-        latitude: evt.latlng.lat,
-        longitude: evt.latlng.lng
+        latitude: latlng.lat,
+        longitude: latlng.lng
       },
-      key: config.mapquest_api_key
+      key: config.mapquest_api_key,
+      geocodeQuality: "ADDRESS",
+      boundingBox: MOSCOW_BBOX
     }, (err, location) => {
+      this._setReady();
       if (!err) {
         this._search.setValue(location.street);
+        this._map.openPopup(location.street, latlng, { className: 'address-tooltip' });
       }
     })
   }
@@ -282,8 +326,9 @@ export default class App {
           color: COLORS[feature.properties.id],
           checked: this._state[feature.properties.id] ? 'checked': '',
           id: feature.properties.id,
-          name: feature.properties.name,
-          distance: Math.abs(measure.distance).toFixed(2)
+          name: locale.names[feature.properties.id],
+          distance: isNaN(measure.distance) ?
+            measure.distance : Math.abs(measure.distance).toFixed(2)
         });
     }).join('') + '</ul>';
     this._info.innerHTML = html;

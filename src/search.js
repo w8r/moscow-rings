@@ -9,9 +9,9 @@ export default class FormController {
   }
 
   getElements () {
-    this.openButton = this.form.querySelector("i");
-    this.input = this.form.querySelector("input");
-    this.deselect = document.querySelector(".deselect");
+    this.openButton = this.form.querySelector('.search-icon');
+    this.input = this.form.querySelector('.search-input');
+    this.deselect = document.querySelector('.search-clear');
   }
 
   _focus(e) {
@@ -43,7 +43,7 @@ export default class FormController {
     e.preventDefault()
     L.DomUtil.removeClass(this.form, "enter-search");
     L.DomUtil.addClass(this.form, "submitted");
-    this.form.getElementsByTagName("input")[0].blur();
+    this.input.blur();
 
     this.fire('submit', { query: this.input.value });
   }
