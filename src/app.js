@@ -14,10 +14,24 @@ import { EPSG3857, moscowEquidistant, MOSCOW_BBOX } from './projection';
 import { project, unproject, buffer } from './geojson';
 import Polygon from 'polygon';
 import Vec2 from 'vec2';
+import mapquest from 'mapquest';
+
+console.log(mapquest);
+
+import Search from './search';
 
 global.turf = turf;
 
 const MAP_STYLE = 'mapbox.dark';
+const MOSCOW_BOUNDS = L.latLngBounds(
+  MOSCOW_BBOX.slice(0,2).reverse(),
+  MOSCOW_BBOX.slice(2).reverse()
+);
+
+const locale = config.l10n[navigator.language || navigator.userLanguage] ||
+  config.l10n.all;
+
+console.log(locale);
 
 export default class App {
 
@@ -55,7 +69,9 @@ export default class App {
 
     this._marker = null;
 
-    this._info = document.querySelector('.info');
+    this._container = document.querySelector('.info');
+
+    this._info = this._container.querySelector('.container');
 
     this._tiles = L.tileLayer(
       'http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
@@ -72,13 +88,36 @@ export default class App {
     //     attribution: 'Mapbox &copy; OSM contributors'
     // }).addTo(map);
 
+    this._search = new Search(document.querySelector('.searchbox'))
+      .on('submit', this._onSearch, this);
     this._load(dataUrl);
+  }
+
+  _onSearch(e) {
+    mapquest.geocode({
+      address: e.query,
+      key: config.mapquest_api_key,
+      boundingBox: MOSCOW_BBOX,
+      thumbMaps: false,
+      "geocodeQuality": "ADDRESS"
+    }, (err, location) => {
+      if (!err) {
+        let latlng = L.latLng(location.latLng.lat, location.latLng.lng);
+        if (MOSCOW_BOUNDS.contains(latlng)) {
+          this._setPoint(latlng);
+          if (!this._map.getBounds().contains(latlng)) {
+            this._map.panTo(latlng);
+          }
+        }
+      }
+    });
   }
 
   /**
    * @param  {String} url
    */
   _load(url) {
+    this._setLoading();
     xhr({ url }, this._onLoad.bind(this));
   }
 
@@ -86,12 +125,14 @@ export default class App {
    * @param  {Object} data
    */
   _processData(data) {
+    // add centroid
     function storeCentroid(f) {
       f.properties.centroid = turf.centroid(f).geometry.coordinates;
     };
     this._data = data = JSON.parse(data);
     data.features.forEach(storeCentroid, this);
 
+    // show all rings
     data.features.forEach((feature) => {
       this._state[feature.properties.id] = true;
     }, this);
@@ -121,6 +162,7 @@ export default class App {
     }
 
     this._geojson.addTo(map);
+    this._setReady();
     this._init();
   }
 
@@ -139,33 +181,72 @@ export default class App {
       }
     }, this);
 
+    this._setLoading();
     navigator.geolocation.getCurrentPosition(L.Util.bind((position) => {
       var latlng = L.latLng(position.coords.latitude,
           position.coords.longitude);
-      if(L.latLngBounds(
-        MOSCOW_BBOX.slice(0,2).reverse(),
-        MOSCOW_BBOX.slice(2).reverse()
-      ).contains(latlng)) {
-        this._onMapClick({
-          latlng: latlng
-        });
-      }
+
+      this._setReady();
+      if (MOSCOW_BOUNDS.contains(latlng)) {
+        this._setPoint(latlng);
+      } else this._showEmpty();
     }, this));
+
+  }
+
+  _showEmpty() {
+    this._showInfo(this._data.features.map((feature) => {
+      return {
+        feature,
+        distance: '?'
+      }
+    }));
+  }
+
+  _setLoading() {
+    L.DomUtil.addClass(this._container, 'loading');
+  }
+
+  _setReady() {
+    L.DomUtil.removeClass(this._container, 'loading');
   }
 
   /**
    * @param  {Object} evt
    */
   _onMapClick(evt) {
+    let latlng = evt.latlng;
+
+    this._setPoint(latlng);
+
+    this._setLoading();
+    mapquest.reverse({
+      coordinates: {
+        latitude: latlng.lat,
+        longitude: latlng.lng
+      },
+      key: config.mapquest_api_key,
+      geocodeQuality: "ADDRESS",
+      boundingBox: MOSCOW_BBOX
+    }, (err, location) => {
+      this._setReady();
+      if (!err) {
+        this._search.setValue(location.street);
+        this._map.openPopup(location.street, latlng, { className: 'address-tooltip' });
+      }
+    })
+  }
+
+  _setPoint(latlng) {
     if (!this._marker) {
-      this._marker = L.circleMarker(evt.latlng, POSITION_STYLE)
+      this._marker = L.circleMarker(latlng, POSITION_STYLE)
         .addTo(this._map);
     } else {
-      this._marker.setLatLng(evt.latlng);
+      this._marker.setLatLng(latlng);
     }
     this._intersects.clearLayers();
 
-    L.Util.requestAnimFrame(() => this._calculateDistances(evt.latlng), this);
+    L.Util.requestAnimFrame(() => this._calculateDistances(latlng), this);
   }
 
   /**
@@ -208,9 +289,6 @@ export default class App {
       if (turf.inside(point, f)) {
         distance = -distance;
         edistance = -edistance;
-        this._state[f.properties.id] = false;
-      } else {
-        this._state[f.properties.id] = true;
       }
 
       L.circleMarker(nearest.geometry.coordinates.slice().reverse(), {
@@ -248,8 +326,9 @@ export default class App {
           color: COLORS[feature.properties.id],
           checked: this._state[feature.properties.id] ? 'checked': '',
           id: feature.properties.id,
-          name: feature.properties.name,
-          distance: Math.abs(measure.distance).toFixed(2)
+          name: locale.names[feature.properties.id],
+          distance: isNaN(measure.distance) ?
+            measure.distance : Math.abs(measure.distance).toFixed(2)
         });
     }).join('') + '</ul>';
     this._info.innerHTML = html;
@@ -288,6 +367,9 @@ export default class App {
     this._renderBuffers();
   }
 
+  /**
+   * Render buffers to the map
+   */
   _renderBuffers() {
     let buffers = this._bufferData;
     this._buffers.clearLayers();

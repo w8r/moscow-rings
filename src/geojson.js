@@ -16,6 +16,7 @@ export function buffer(feature, radius){
 }
 
 function _buffer(feature, radius) {
+  // console.time('jsts');
   const reader = new jsts.io.GeoJSONReader();
   const geom = reader.read(JSON.stringify(feature.geometry));
   let buffered = geom.buffer(radius, QUADRANT_SEGMENTS);
@@ -34,7 +35,7 @@ function _buffer(feature, radius) {
   else{
     buffered = turf.featurecollection([turf.polygon(buffered.coordinates)]);
   }
-
+  // console.timeEnd('jsts');
   return buffered;
 }
 

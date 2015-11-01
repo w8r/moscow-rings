@@ -1,6 +1,6 @@
 import COLORS from './colors';
 
-const LINE_WIDTH = 4;
+const LINE_WIDTH = 5;
 
 export { COLORS };
 
@@ -22,7 +22,8 @@ export function ringStyle(feature) {
   return {
     color: COLORS[feature.properties.id],
     weight: LINE_WIDTH / (feature.properties.id + 1),
-    fillOpacity: 0.1,
+    opacity: 1,
+    fillOpacity: 0.05,
     clickable: false
   };
 }

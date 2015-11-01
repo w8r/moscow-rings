@@ -1,0 +1,87 @@
+.box-sizing(@boxmodel) {
+  -webkit-box-sizing: @boxmodel;
+     -moz-box-sizing: @boxmodel;
+          box-sizing: @boxmodel;
+}
+
+.font-smoothing(@smoothing) {
+  -webkit-font-smoothing: @smoothing;
+          font-smoothing: @smoothing;
+}
+
+.transform-style(@style) {
+  -webkit-transform-style: @style;
+          transform-style: @style;
+}
+
+.animation(@animation) {
+  -webkit-animation: @animation;
+          animation: @animation;
+}
+
+.appearance(@appearance) {
+  -webkit-appearance: @appearance;
+     -moz-appearance: @appearance;
+      -ms-appearance: @appearance; // IE9 only
+          appearance: @appearance;
+}
+
+.transition(@transition) {
+  -webkit-transition: @transition;
+       -o-transition: @transition;
+          transition: @transition;
+}
+
+.transition-delay(@transition-delay) {
+  -webkit-transition-delay: @transition-delay;
+          transition-delay: @transition-delay;
+}
+
+.translate(@x; @y) {
+  -webkit-transform: translate(@x, @y);
+      -ms-transform: translate(@x, @y); // IE9 only
+       -o-transform: translate(@x, @y);
+          transform: translate(@x, @y);
+}
+
+.transform-origin(@origin) {
+  -webkit-transform-origin: @origin;
+     -moz-transform-origin: @origin;
+      -ms-transform-origin: @origin; // IE9 only
+          transform-origin: @origin;
+}
+
+.rotate(@degrees) {
+  -webkit-transform: rotate(@degrees);
+      -ms-transform: rotate(@degrees); // IE9 only
+       -o-transform: rotate(@degrees);
+          transform: rotate(@degrees);
+}
+
+.rotateX(@degrees) {
+  -webkit-transform: rotateX(@degrees);
+      -ms-transform: rotateX(@degrees); // IE9 only
+       -o-transform: rotateX(@degrees);
+          transform: rotateX(@degrees);
+}
+
+.scale(@ratio) {
+  -webkit-transform: scale(@ratio);
+      -ms-transform: scale(@ratio); // IE9 only
+       -o-transform: scale(@ratio);
+          transform: scale(@ratio);
+}
+
+.scale(@ratioX; @ratioY) {
+  -webkit-transform: scale(@ratioX, @ratioY);
+      -ms-transform: scale(@ratioX, @ratioY); // IE9 only
+       -o-transform: scale(@ratioX, @ratioY);
+          transform: scale(@ratioX, @ratioY);
+}
+
+.user-select(@select) {
+  -webkit-user-select: @select;
+     -moz-user-select: @select;
+      -ms-user-select: @select; // IE10+
+          user-select: @select;
+}
