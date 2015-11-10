@@ -1,6 +1,7 @@
 const L = global.L || require('leaflet');
 
 import xhr from 'xhr';
+import jsonp from 'jsonp';
 import * as Spinner from 'spin.js';
 import * as config from '../config.json';
 import { ringStyle, bufferStyle, POSITION_STYLE, nearestStyle, COLORS } from './styles';
@@ -14,9 +15,7 @@ import { EPSG3857, moscowEquidistant, MOSCOW_BBOX } from './projection';
 import { project, unproject, buffer } from './geojson';
 import Polygon from 'polygon';
 import Vec2 from 'vec2';
-import mapquest from 'mapquest';
-
-console.log(mapquest);
+import nominatim from 'nominatim-geocode';
 
 import Search from './search';
 
@@ -28,10 +27,10 @@ const MOSCOW_BOUNDS = L.latLngBounds(
   MOSCOW_BBOX.slice(2).reverse()
 );
 
-const locale = config.l10n[navigator.language || navigator.userLanguage] ||
-  config.l10n.all;
+const lang = navigator.language || navigator.userLanguage || 'ru-RU';
+const locale = config.l10n[lang] || config.l10n.all;
 
-console.log(locale);
+console.log(locale, lang);
 
 export default class App {
 
@@ -94,20 +93,24 @@ export default class App {
   }
 
   _onSearch(e) {
-    mapquest.geocode({
-      address: e.query,
-      key: config.mapquest_api_key,
-      boundingBox: MOSCOW_BBOX,
-      thumbMaps: false,
-      "geocodeQuality": "ADDRESS"
+    nominatim.geocode({
+      q: e.query,
+      'accept-language': lang,
+      viewboxlbrt: MOSCOW_BBOX.join(',')
     }, (err, location) => {
-      if (!err) {
-        let latlng = L.latLng(location.latLng.lat, location.latLng.lng);
-        if (MOSCOW_BOUNDS.contains(latlng)) {
-          this._setPoint(latlng);
-          if (!this._map.getBounds().contains(latlng)) {
-            this._map.panTo(latlng);
-          }
+      this._setReady();
+      if (!err && location.length !== 0) {
+        location = location[0];
+        let latlng = L.latLng(parseFloat(location.lat), parseFloat(location.lon));
+        this._setPoint(latlng);
+
+        this._search.setValue(this._formatAddress(location));
+        this._map.openPopup(this._formatAddress(location), latlng, {
+          className: 'address-tooltip'
+        });
+
+        if (!this._map.getBounds().contains(latlng)) {
+          this._map.panTo(latlng);
         }
       }
     });
@@ -211,6 +214,10 @@ export default class App {
     L.DomUtil.removeClass(this._container, 'loading');
   }
 
+  _formatAddress(location) {
+    return L.Util.template('{ road },&nbsp;{ house_number }', location.address);
+  }
+
   /**
    * @param  {Object} evt
    */
@@ -220,21 +227,21 @@ export default class App {
     this._setPoint(latlng);
 
     this._setLoading();
-    mapquest.reverse({
-      coordinates: {
-        latitude: latlng.lat,
-        longitude: latlng.lng
-      },
-      key: config.mapquest_api_key,
-      geocodeQuality: "ADDRESS",
-      boundingBox: MOSCOW_BBOX
+
+    nominatim.reverse({
+      lat: latlng.lat,
+      lon: latlng.lng,
+      'accept-language': 'ru-RU',
+      addressdetails: 1
     }, (err, location) => {
       this._setReady();
       if (!err) {
-        this._search.setValue(location.street);
-        this._map.openPopup(location.street, latlng, { className: 'address-tooltip' });
+        this._search.setValue(this._formatAddress(location));
+        this._map.openPopup(this._formatAddress(location), latlng, {
+          className: 'address-tooltip'
+        });
       }
-    })
+    });
   }
 
   _setPoint(latlng) {
