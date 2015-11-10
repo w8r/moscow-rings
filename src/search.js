@@ -34,7 +34,7 @@ export default class FormController {
   }
 
   setValue(value) {
-    this.input.value = value;
+    this.input.value = value.replace(/\&nbsp\;/g, ' ');
     L.DomUtil.removeClass(this.form, "submitted");
     L.DomUtil.addClass(this.form, "enter-search");
   }
