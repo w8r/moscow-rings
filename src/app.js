@@ -135,10 +135,11 @@ export default class App {
     this._data = data = JSON.parse(data);
     data.features.forEach(storeCentroid, this);
 
-    // show all rings
-    data.features.forEach((feature) => {
-      this._state[feature.properties.id] = true;
-    }, this);
+    // show all rings, sort for kremlin to be on top
+    data.features.sort((f1, f2) => f2.properties.id - f1.properties.id)
+      .forEach((feature) => {
+        this._state[feature.properties.id] = true;
+      }, this);
 
     this._geojson = L.geoJson(data, { style: ringStyle });
 
@@ -215,7 +216,9 @@ export default class App {
   }
 
   _formatAddress(location) {
-    return L.Util.template('{ road },&nbsp;{ house_number }', location.address);
+    var addr = location.address;
+    return addr.road + (addr.house_number ?
+      (',&nbsp;' + addr.house_number.replace(/\s/g, '&nbsp;')) : '');
   }
 
   /**
@@ -322,7 +325,7 @@ export default class App {
    */
   _showInfo(measures) {
     let html = '';
-    html = '<ul>' + measures.map((measure) => {
+    html = '<ul>' + measures.slice().reverse().map((measure) => {
       var feature = measure.feature;
       return L.Util.template('<li data-feature-id="{id}">' +
         '<label class="topcoat-checkbox">' +
@@ -382,7 +385,9 @@ export default class App {
     this._buffers.clearLayers();
     if (!buffers) return;
 
-    buffers.features.forEach((feature) => {
+    buffers.features.sort((feature1, feature2) => {
+      return feature2.properties.id - feature1.properties.id;
+    }).forEach((feature) => {
       if (this._state[feature.properties.id]) {
         this._buffers.addData(feature);
       }
