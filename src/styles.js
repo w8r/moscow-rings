@@ -23,7 +23,7 @@ export function ringStyle(feature) {
     color: COLORS[feature.properties.id],
     weight: LINE_WIDTH / (feature.properties.id + 1),
     opacity: 1,
-    fillOpacity: 0.05,
+    fillOpacity: 0.15,
     clickable: false
   };
 }

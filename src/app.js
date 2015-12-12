@@ -135,10 +135,11 @@ export default class App {
     this._data = data = JSON.parse(data);
     data.features.forEach(storeCentroid, this);
 
-    // show all rings
-    data.features.forEach((feature) => {
-      this._state[feature.properties.id] = true;
-    }, this);
+    // show all rings, sort for kremlin to be on top
+    data.features.sort((f1, f2) => f2.properties.id - f1.properties.id)
+      .forEach((feature) => {
+        this._state[feature.properties.id] = true;
+      }, this);
 
     this._geojson = L.geoJson(data, { style: ringStyle });
 
@@ -158,13 +159,25 @@ export default class App {
 
     this._processData(data);
 
+    let torsData = JSON.parse(data);
+    torsData.features = torsData.features.map((f, i, arr) => {
+      if (i) {
+        f.geometry.coordinates.push(arr[i - 1].geometry.coordinates[0].slice());
+      }
+      return f;
+    });
+
     if (!this._positioned) {
       map.fitBounds(this._geojson.getBounds(), {
         padding: [20, 20]
       });
     }
 
-    this._geojson.addTo(map);
+    this._torsData = L.geoJson(torsData, { style: ringStyle });
+    this._torsData.addTo(map);
+
+    //this._geojson.addTo(map);
+    //this._geojson.removeFrom(map);
     this._setReady();
     this._init();
   }
@@ -215,7 +228,9 @@ export default class App {
   }
 
   _formatAddress(location) {
-    return L.Util.template('{ road },&nbsp;{ house_number }', location.address);
+    var addr = location.address;
+    return addr.road + (addr.house_number ?
+      (',&nbsp;' + addr.house_number.replace(/\s/g, '&nbsp;')) : '');
   }
 
   /**
@@ -322,7 +337,7 @@ export default class App {
    */
   _showInfo(measures) {
     let html = '';
-    html = '<ul>' + measures.map((measure) => {
+    html = '<ul>' + measures.slice().reverse().map((measure) => {
       var feature = measure.feature;
       return L.Util.template('<li data-feature-id="{id}">' +
         '<label class="topcoat-checkbox">' +
@@ -382,7 +397,9 @@ export default class App {
     this._buffers.clearLayers();
     if (!buffers) return;
 
-    buffers.features.forEach((feature) => {
+    buffers.features.sort((feature1, feature2) => {
+      return feature2.properties.id - feature1.properties.id;
+    }).forEach((feature) => {
       if (this._state[feature.properties.id]) {
         this._buffers.addData(feature);
       }
