@@ -2,7 +2,7 @@
   "api_token": "pk.eyJ1IjoidzhyIiwiYSI6InBWVUZaSDAifQ.lQUJXO6rqqAiKRR6VW8TEg",
   "mapquest_api_key": "tGrfqih5TzzcVSG8s1Vm282F8QrZ8Q8x",
   "l10n": {
-    "ru-Ru": {
+    "ru-RU": {
       "search": "Поиск",
       "names": ["Красная Площадь", "Кремль", "Бульварное кольцо", "Садовое кольцо", "Третье Кольцо", "МКАД"]
     },
