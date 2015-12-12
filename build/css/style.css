@@ -504,6 +504,8 @@ body,
   font-size: 45px;
   color: #fff;
   font-weight: 100;
+  vertical-align: top;
+  line-height: 70px;
 }
 .info ul {
   padding: 0;
@@ -715,7 +717,7 @@ body,
   height: 50px;
   width: 50px;
   right: 0;
-  top: 0;
+  top: 70px;
 }
 .searchbox .search-icon:before,
 .searchbox .search-icon:after {

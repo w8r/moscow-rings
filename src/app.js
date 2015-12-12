@@ -159,13 +159,25 @@ export default class App {
 
     this._processData(data);
 
+    let torsData = JSON.parse(data);
+    torsData.features = torsData.features.map((f, i, arr) => {
+      if (i) {
+        f.geometry.coordinates.push(arr[i - 1].geometry.coordinates[0].slice());
+      }
+      return f;
+    });
+
     if (!this._positioned) {
       map.fitBounds(this._geojson.getBounds(), {
         padding: [20, 20]
       });
     }
 
-    this._geojson.addTo(map);
+    this._torsData = L.geoJson(torsData, { style: ringStyle });
+    this._torsData.addTo(map);
+
+    //this._geojson.addTo(map);
+    //this._geojson.removeFrom(map);
     this._setReady();
     this._init();
   }
