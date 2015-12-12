@@ -27,7 +27,7 @@ const MOSCOW_BOUNDS = L.latLngBounds(
   MOSCOW_BBOX.slice(2).reverse()
 );
 
-const lang = navigator.language || navigator.userLanguage || 'ru-RU';
+const lang = /*navigator.language || navigator.userLanguage ||*/ 'ru-RU';
 const locale = config.l10n[lang] || config.l10n.all;
 
 console.log(locale, lang);
