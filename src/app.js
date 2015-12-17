@@ -4,7 +4,10 @@ import xhr from 'xhr';
 import jsonp from 'jsonp';
 import * as Spinner from 'spin.js';
 import * as config from '../config.json';
-import { ringStyle, bufferStyle, POSITION_STYLE, nearestStyle, COLORS } from './styles';
+import {
+  ringStyle, torusStyle,
+  bufferStyle, POSITION_STYLE, nearestStyle, COLORS
+} from './styles';
 import { euclidianDistance, nearestPoint, planarNearestPoint } from './utils';
 
 import turf from 'turf';
@@ -38,40 +41,97 @@ export default class App {
 
     let { center, zoom } = L.Hash.parseHash(location.hash);
 
+    /**
+     * @type {L.Map}
+     */
     this._map = global.map = L.map(document.querySelector(mapContainer), {
       zoomControl: false
     });
     L.control.zoom({ position: 'bottomright' }).addTo(this._map);
 
+    /**
+     * Wether the position is read
+     * @type {Boolean}
+     */
     this._positioned = (center && zoom)
     if (this._positioned) {
       this._map.setView(center, zoom);
     }
 
+    /**
+     * Intersection points
+     * @type {L.LayerGroup}
+     */
     this._intersects = L.layerGroup().addTo(this._map);
 
+    /**
+     * Buffer fills
+     * @type {L.GeoJSON}
+     */
     this._buffers = L.geoJson(null, { style: bufferStyle }).addTo(this._map);
 
+    /**
+     * @type {L.Control.Hash}
+     */
     this._hash = L.hash(map);
 
+    /**
+     * Rings data
+     * @type {GeoJSON}
+     */
     this._data = null;
 
+    /**
+     * Buffered rings
+     * @type {GeoJSON}
+     */
     this._bufferData = null;
 
+    /**
+     * On/off states for rings
+     * @type {Object}
+     */
     this._state = {};
 
+    /**
+     * Rings data in Moscow equidistant projection
+     * @type {GeoJSON}
+     */
     this._equidistant = null;
 
+    /**
+     * Rings layer
+     * @type {L.GeoJSON}
+     */
     this._geojson = null;
 
-    this._index = null;
+    /**
+     * Torus fills
+     * @type {L.GeoJSON}
+     */
+    this._toruses = null;
 
+    /**
+     * Position
+     * @type {L.CircleMarker}
+     */
     this._marker = null;
 
+    /**
+     * @type {Element}
+     */
     this._container = document.querySelector('.info');
 
+    /**
+     * Info control
+     * @type {Element}
+     */
     this._info = this._container.querySelector('.container');
 
+    /**
+     * Raster
+     * @type {L.TileLayer}
+     */
     this._tiles = L.tileLayer(
       'http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">' +
@@ -87,6 +147,10 @@ export default class App {
     //     attribution: 'Mapbox &copy; OSM contributors'
     // }).addTo(map);
 
+    /**
+     * Search control
+     * @type {Search}
+     */
     this._search = new Search(document.querySelector('.searchbox'))
       .on('submit', this._onSearch, this);
     this._load(dataUrl);
@@ -173,10 +237,10 @@ export default class App {
       });
     }
 
-    this._torsData = L.geoJson(torsData, { style: ringStyle });
-    this._torsData.addTo(map);
+    this._toruses = L.geoJson(torsData, { style: torusStyle });
+    this._toruses.addTo(map);
 
-    //this._geojson.addTo(map);
+    this._geojson.addTo(map);
     //this._geojson.removeFrom(map);
     this._setReady();
     this._init();

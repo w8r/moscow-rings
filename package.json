@@ -4,7 +4,8 @@
   "description": "Distance visiualization based on Moscow historical transport reference rings",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "./node_modules/.bin/gulp",
+    "build": "./node_modules/.bin/gulp production"
   },
   "repository": {
     "type": "git",

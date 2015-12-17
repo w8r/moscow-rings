@@ -23,7 +23,7 @@ export function ringStyle(feature) {
     color: COLORS[feature.properties.id],
     weight: LINE_WIDTH / (feature.properties.id + 1),
     opacity: 1,
-    fillOpacity: 0.15,
+    fillOpacity: 0.0,
     clickable: false
   };
 }
@@ -33,7 +33,18 @@ export function bufferStyle(feature) {
     color: COLORS[feature.properties.id] || '#00f',
     weight: 2, //LINE_WIDTH / (feature.properties.id + 1),
     fillOpacity: 0,
+    opacity: 1,
     dashArray: [5, 5],
+    clickable: false
+  };
+}
+
+export function torusStyle(feature) {
+  return {
+    color: COLORS[feature.properties.id],
+    weight: 0,
+    opacity: 1,
+    fillOpacity: 0.15,
     clickable: false
   };
 }
