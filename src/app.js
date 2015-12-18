@@ -19,6 +19,7 @@ import { project, unproject, buffer } from './geojson';
 import Polygon from 'polygon';
 import Vec2 from 'vec2';
 import nominatim from 'nominatim-geocode';
+import formatcoords from 'formatcoords';
 
 import Search from './search';
 
@@ -278,7 +279,7 @@ export default class App {
     this._showInfo(this._data.features.map((feature) => {
       return {
         feature,
-        distance: '?'
+        distance: ''
       }
     }));
   }
@@ -293,6 +294,11 @@ export default class App {
 
   _formatAddress(location) {
     var addr = location.address;
+    if (!addr.road) {
+      addr.road = formatcoords(
+        parseFloat(location.lat), parseFloat(location.lon))
+      .format('FFf');
+    }
     return addr.road + (addr.house_number ?
       (',&nbsp;' + addr.house_number.replace(/\s/g, '&nbsp;')) : '');
   }
@@ -403,18 +409,20 @@ export default class App {
     let html = '';
     html = '<ul>' + measures.slice().reverse().map((measure) => {
       var feature = measure.feature;
+      var distance = (measure.distance === '') ?
+        measure.distance :
+        (Math.abs(measure.distance).toFixed(2) + ' km');
       return L.Util.template('<li data-feature-id="{id}">' +
         '<label class="topcoat-checkbox">' +
         '<input type="checkbox" data-feature-id="{id}" {checked}> ' +
-        '<span class="distance">{distance} km</span>' +
+        '<span class="distance">{distance}</span>' +
         '<span class="name" style="color: {color}">{name}</span>' +
         '</label></li>', {
           color: COLORS[feature.properties.id],
           checked: this._state[feature.properties.id] ? 'checked': '',
           id: feature.properties.id,
           name: locale.names[feature.properties.id],
-          distance: isNaN(measure.distance) ?
-            measure.distance : Math.abs(measure.distance).toFixed(2)
+          distance: distance
         });
     }).join('') + '</ul>';
     this._info.innerHTML = html;

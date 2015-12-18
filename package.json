@@ -50,6 +50,7 @@
     "d3": "^3.5.6",
     "d3-geo-azimuthal-equidistant": "0.0.0",
     "d3-geo-projection": "^0.2.15",
+    "formatcoords": "^1.0.2",
     "geojson-utils": "^1.1.0",
     "jsonp": "^0.2.0",
     "jsts": "^0.16.0",
