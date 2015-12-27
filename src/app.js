@@ -161,6 +161,7 @@ export default class App {
    * @param  {Event} e
    */
   _onSearch(e) {
+    this._setLoading();
     nominatim.geocode({
       q: e.query,
       'accept-language': lang,
@@ -313,6 +314,20 @@ export default class App {
       (',&nbsp;' + addr.house_number.replace(/\s/g, '&nbsp;')) : '');
   }
 
+
+  _formatHash(latlng) {
+    let map = this._map;
+    let zoom = map.getZoom();
+    let precision = Math.max(6, Math.ceil(Math.log(zoom) / Math.LN2));
+
+    latlng = latlng || map.getCenter();
+
+    return "#" + [zoom,
+      latlng.lat.toFixed(precision),
+      latlng.lng.toFixed(precision)
+    ].join("/");
+  }
+
   /**
    * @param  {Object} evt
    */
@@ -357,7 +372,7 @@ export default class App {
     } else {
       this._marker.setLatLng(latlng);
     }
-    location.hash = L.Hash.formatHash(this._map);
+    location.hash = this._formatHash(latlng);
     this._intersects.clearLayers();
 
     L.Util.requestAnimFrame(() => this._calculateDistances(latlng), this);

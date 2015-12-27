@@ -15,8 +15,10 @@ export default class FormController {
   }
 
   _focus(e) {
-    this.setValue(this.input.value);
-    this.input.focus();
+    if (e.target !== document.activeElement) {
+      this.setValue(this.input.value);
+      this.input.focus();
+    }
   }
 
   addListeners () {
