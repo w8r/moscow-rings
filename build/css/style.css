@@ -497,7 +497,7 @@ body,
   overflow-y: auto;
   border: 1px solid rgba(255, 255, 255, 0.5);
   color: #dfdfdf;
-  font-size: 11px;
+  font-size: 12px;
   font-family: 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 .info .header span {
@@ -568,6 +568,11 @@ body,
 }
 .info .drop:hover ul {
   transform: scale(1);
+}
+.shares {
+  position: absolute;
+  top: 32px;
+  left: 310px;
 }
 .search-loading {
   position: absolute;

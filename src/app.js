@@ -54,7 +54,7 @@ export default class App {
      * Wether the position is read
      * @type {Boolean}
      */
-    this._positioned = (center && zoom)
+    this._positioned = (center && zoom);
     if (this._positioned) {
       this._map.setView(center, zoom);
     }
@@ -74,7 +74,7 @@ export default class App {
     /**
      * @type {L.Control.Hash}
      */
-    this._hash = L.hash(map);
+    //this._hash = L.hash(map);
 
     /**
      * Rings data
@@ -157,6 +157,9 @@ export default class App {
     this._load(dataUrl);
   }
 
+  /**
+   * @param  {Event} e
+   */
   _onSearch(e) {
     nominatim.geocode({
       q: e.query,
@@ -208,10 +211,10 @@ export default class App {
 
     this._geojson = L.geoJson(data, { style: ringStyle });
 
-    console.time('proj');
+    //console.time('proj');
     this._equidistant = project(data, moscowEquidistant);
     this._equidistant.features.forEach(storeCentroid, this);
-    console.timeEnd('proj');
+    //console.timeEnd('proj');
   }
 
   /**
@@ -233,15 +236,18 @@ export default class App {
     });
 
     if (!this._positioned) {
-      map.fitBounds(this._geojson.getBounds(), {
+      this._map.fitBounds(this._geojson.getBounds(), {
         padding: [20, 20]
       });
+    } else {
+      this._map.setZoom(this._map.getBoundsZoom(this._geojson.getBounds(),
+        true, [20, 20]));
     }
 
     this._toruses = L.geoJson(torsData, { style: torusStyle });
-    this._toruses.addTo(map);
+    this._toruses.addTo(this._map);
 
-    this._geojson.addTo(map);
+    this._geojson.addTo(this._map);
     //this._geojson.removeFrom(map);
     this._setReady();
     this._init();
@@ -263,16 +269,20 @@ export default class App {
     }, this);
 
     this._setLoading();
-    navigator.geolocation.getCurrentPosition(L.Util.bind((position) => {
-      var latlng = L.latLng(position.coords.latitude,
-          position.coords.longitude);
 
-      this._setReady();
-      if (MOSCOW_BOUNDS.contains(latlng)) {
-        this._setPoint(latlng);
-      } else this._showEmpty();
-    }, this));
+    if (this._positioned) {
+      this._setLocation(this._map.getCenter());
+    } else {
+      navigator.geolocation.getCurrentPosition(L.Util.bind((position) => {
+        var latlng = L.latLng(position.coords.latitude,
+            position.coords.longitude);
 
+        this._setReady();
+        if (MOSCOW_BOUNDS.contains(latlng)) {
+          this._setPoint(latlng);
+        } else this._showEmpty();
+      }, this));
+    }
   }
 
   _showEmpty() {
@@ -308,9 +318,15 @@ export default class App {
    */
   _onMapClick(evt) {
     let latlng = evt.latlng;
+    this._setLocation(evt.latlng);
+  }
 
+  /**
+   * Sets point and geocodes
+   * @param {L.LatLng} latlng
+   */
+  _setLocation(latlng) {
     this._setPoint(latlng);
-
     this._setLoading();
 
     nominatim.reverse({
@@ -329,6 +345,11 @@ export default class App {
     });
   }
 
+
+  /**
+   * Sets point and calculates buffers
+   * @param {L.LatLng} latlng
+   */
   _setPoint(latlng) {
     if (!this._marker) {
       this._marker = L.circleMarker(latlng, POSITION_STYLE)
@@ -336,6 +357,7 @@ export default class App {
     } else {
       this._marker.setLatLng(latlng);
     }
+    location.hash = L.Hash.formatHash(this._map);
     this._intersects.clearLayers();
 
     L.Util.requestAnimFrame(() => this._calculateDistances(latlng), this);

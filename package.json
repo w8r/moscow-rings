@@ -1,6 +1,6 @@
 {
   "name": "moscow-rings",
-  "version": "1.0.0",
+  "version": "1.0.7",
   "description": "Distance visiualization based on Moscow historical transport reference rings",
   "main": "index.js",
   "scripts": {

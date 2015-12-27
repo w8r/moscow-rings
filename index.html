@@ -2,10 +2,32 @@
 <html>
     <head>
         <title>Moscow Rings</title>
-        <!-- <link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.5/leaflet.css">-->
-        <!--<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.5/leaflet-src.js"></script>-->
+        <meta property="og:url"           content="http://mosrings.com" />
+        <meta property="og:type"          content="website" />
+        <meta property="og:title"         content="Mosrings" />
+        <meta property="og:description"   content="Ваше положение относительно московских транспортных колец" />
+        <meta property="og:image"         content="http://mosrings.com/build/images/icons/apple-touch-icon-180x180.png" />
         <link href='https://fonts.googleapis.com/css?family=Roboto:400,100,300,700&subset=latin,cyrillic-ext' rel='stylesheet' type='text/css'>
-        <link rel="stylesheet" type="text/css" href="build/css/style.css?6">
+        <link rel="stylesheet" type="text/css" href="build/css/style.css?1.0.7">
+
+        <link rel="apple-touch-icon" sizes="57x57" href="build/images/icons/apple-touch-icon-57x57.png">
+        <link rel="apple-touch-icon" sizes="60x60" href="build/images/icons//apple-touch-icon-60x60.png">
+        <link rel="apple-touch-icon" sizes="72x72" href="build/images/icons//apple-touch-icon-72x72.png">
+        <link rel="apple-touch-icon" sizes="76x76" href="build/images/icons//apple-touch-icon-76x76.png">
+        <link rel="apple-touch-icon" sizes="114x114" href="build/images/icons/apple-touch-icon-114x114.png">
+        <link rel="apple-touch-icon" sizes="120x120" href="build/images/icons/apple-touch-icon-120x120.png">
+        <link rel="apple-touch-icon" sizes="144x144" href="build/images/icons/apple-touch-icon-144x144.png">
+        <link rel="apple-touch-icon" sizes="152x152" href="build/images/icons/apple-touch-icon-152x152.png">
+        <link rel="apple-touch-icon" sizes="180x180" href="build/images/icons/apple-touch-icon-180x180.png">
+        <link rel="icon" type="image/png" href="build/images/icons/favicon-32x32.png" sizes="32x32">
+        <link rel="icon" type="image/png" href="build/images/icons/android-chrome-192x192.png" sizes="192x192">
+        <link rel="icon" type="image/png" href="build/images/icons/favicon-96x96.png" sizes="96x96">
+        <link rel="icon" type="image/png" href="build/images/icons/favicon-16x16.png" sizes="16x16">
+        <link rel="manifest" href="build/images/icons/manifest.json">
+        <link rel="mask-icon" href="build/images/icons/safari-pinned-tab.svg" color="#5bbad5">
+        <meta name="msapplication-TileColor" content="#da532c">
+        <meta name="msapplication-TileImage" content="build/images/icons/mstile-144x144.png">
+        <meta name="theme-color" content="#ffffff">
         <!-- HTML5 IE8 support of HTML5 elements and media queries -->
         <!--[if lt IE 9]>
           <script src="../assets/js/html5shiv.js"></script>
@@ -34,6 +56,17 @@
                 </div>
             </div>
         </div>
-        <script type="text/javascript" src="build/app.js?7"></script>
+        <div class="shares">
+            <div class="fb-like" data-href="http://mosrings.com" data-width="130px" data-layout="box_count" data-action="like" data-show-faces="true" data-share="false"></div>
+        </div>
+        <script type="text/javascript" src="build/app.js?1.0.7"></script>
+        <div id="fb-root"></div>
+        <script>(function(d, s, id) {
+          var js, fjs = d.getElementsByTagName(s)[0];
+          if (d.getElementById(id)) return;
+          js = d.createElement(s); js.id = id;
+          js.src = "//connect.facebook.net/en_GB/sdk.js#xfbml=1&version=v2.5&appId=137085699782056";
+          fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'facebook-jssdk'));</script>
     </body>
 </html>
