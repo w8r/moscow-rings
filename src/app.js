@@ -20,6 +20,7 @@ import Polygon from 'polygon';
 import Vec2 from 'vec2';
 import nominatim from 'nominatim-geocode';
 import formatcoords from 'formatcoords';
+import sortResults from './sort_results';
 
 import Search from './search';
 
@@ -27,9 +28,10 @@ global.turf = turf;
 
 const MAP_STYLE = 'mapbox.dark';
 const MOSCOW_BOUNDS = L.latLngBounds(
-  MOSCOW_BBOX.slice(0,2).reverse(),
+  MOSCOW_BBOX.slice(0, 2).reverse(),
   MOSCOW_BBOX.slice(2).reverse()
 );
+const MOSCOW_CENTER = MOSCOW_BOUNDS.getCenter();
 
 const lang = /*navigator.language || navigator.userLanguage ||*/ 'ru-RU';
 const locale = config.l10n[lang] || config.l10n.all;
@@ -135,9 +137,9 @@ export default class App {
      */
     this._tiles = L.tileLayer(
       'http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">' +
-                   'OpenStreetMap</a> contributors, &copy; ' +
-                   '<a href="http://cartodb.com/attributions">CartoDB</a>'
+      attribution: `&copy; <a href="http://www.openstreetmap.org/copyright">
+                   OSM</a> contributors, &copy;
+                   <a href="http://cartodb.com/attributions">CartoDB</a>`
     }).addTo(this._map);
 
     // this._tiles = L.tileLayer(
@@ -154,6 +156,10 @@ export default class App {
      */
     this._search = new Search(document.querySelector('.searchbox'))
       .on('submit', this._onSearch, this);
+
+    this._map.attributionControl.setPrefix(
+      `<a class="github-button" href="https://github.com/w8r/moscow-rings/"><img src="/build/images/icons/github.svg">Source code</a>`
+    );
     this._load(dataUrl);
   }
 
@@ -163,12 +169,19 @@ export default class App {
   _onSearch(e) {
     this._setLoading();
     nominatim.geocode({
-      q: e.query,
+      q: 'Москва ' + e.query,
       'accept-language': lang,
-      viewboxlbrt: MOSCOW_BBOX.join(',')
+      viewboxlbrt: MOSCOW_BBOX.join(','),
+      dedupe: 1,
+      bounded: 1
     }, (err, location) => {
       this._setReady();
       if (!err && location.length !== 0) {
+        // console.log(location.map((l) => l.display_name));
+        location = location.sort((a, b) => {
+          return sortResults(a, b, MOSCOW_CENTER, e.query);
+        });
+        //console.log(location);
         location = location[0];
         let latlng = L.latLng(parseFloat(location.lat), parseFloat(location.lon));
         this._setPoint(latlng);
@@ -304,7 +317,7 @@ export default class App {
   }
 
   _formatAddress(location) {
-    var addr = location.address;
+    let addr = location.address;
     if (!addr.road) {
       addr.road = formatcoords(
         parseFloat(location.lat), parseFloat(location.lon))
