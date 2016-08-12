@@ -43,3 +43,11 @@ With this one you can achieve your [goal](https://w8r.github.io/moscow-rings/).
 
 
 Have fun!
+
+## Publications
+
+* "Как близко вы от Кремля?" [Afisha Daily, 02.2016](https://daily.afisha.ru/infoporn/600-naskolko-blizko-ot-kremlya/)
+
+## Authors
+* Grigory Golikov (idea, logo, design) [@ggolikov](https://github.com/ggolikov)
+* Alexander Milevski (implementation) [@w8r](https://github.com/w8r)
