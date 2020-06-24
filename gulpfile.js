@@ -1,133 +1,71 @@
 var gulp = require('gulp');
-
-var browserify = require('browserify');
-var watchify = require('watchify');
-var babel = require('babelify');
-
-var source = require('vinyl-source-stream');
-var buffer = require('vinyl-buffer');
-var merge = require('utils-merge');
-
-var rename = require('gulp-rename');
-var uglify = require('gulp-uglify');
-var sourcemaps = require('gulp-sourcemaps');
 var serve = require('gulp-serve');
-var rename = require('gulp-rename')
-
-
-/* nicer browserify errors */
-var gutil = require('gulp-util');
-var chalk = require('chalk');
 
 var less = require('gulp-less');
 var path = require('path');
 
+const rollup = require('rollup');
+const babel = require('rollup-plugin-babel');
+const commonjs = require('rollup-plugin-commonjs');
+const nodeResolve = require('rollup-plugin-node-resolve');
+const json = require('rollup-plugin-json');
+
 var dependencies = [];
 
-gulp.task('less', function () {
+gulp.task('less', () => {
   return gulp.src('./src/**/*.less')
     .pipe(less({
-      paths: [ path.join(__dirname, 'less', 'includes') ]
+      paths: [path.join(__dirname, 'less', 'includes')]
     }))
     .pipe(gulp.dest('./build/css'));
 });
 
-function compile(watch) {
-  var browserified = browserify('./src/index.js', {
-      require: dependencies,
-      debug: true,
-      'ignore-missing': true
-    })
-    .transform(
-      babel.configure({
-        optional: ['runtime']
-      })
-    );
+const plugins = [
+  nodeResolve({
+    preferBuiltins: false
+  }), commonjs(), json(), babel()
+];
 
-  var bundler = browserified;
-
-  if (watch) {
-    dependencies.forEach(function(dep) {
-      browserified.external(dep);
+gulp.task('build', () => {
+  return rollup.rollup({
+    input: './src/index.js',
+    plugins
+  }).then(bundle => {
+    return bundle.write({
+      file: './dist/app.js',
+      format: 'iife',
+      name: 'mosrings',
+      sourcemap: false
     });
-    bundler = watchify(browserified);
-  }
+  });
+});
 
-  function rebundle() {
-    var stream = bundler.bundle()
-      .on('error', function(err) {
-        gutil.log(
-          gutil.colors.red('Watchify:'),
-          gutil.colors.white(err)
-        );
-        this.emit('end');
-      })
-      .pipe(source('app.js'))
-      .pipe(buffer())
-      .pipe(gulp.dest('./build'))
-      .pipe(sourcemaps.init({
-        loadMaps: true
-      }))
-      .pipe(rename('app.min.js'))
-      .pipe(sourcemaps.init({
-        loadMaps: true
-      }));
 
-    if (watch) {
-      stream
-        .pipe(sourcemaps.write('.'))
-        .pipe(gulp.dest('./build'));
-    } else {
-      stream
-         .pipe(uglify())
-         .pipe(rename('app.js'))
-         .pipe(sourcemaps.write('.'))
-         .pipe(gulp.dest('./build'));
+gulp.task('watch', () => {
+  return rollup.watch({
+    input: './src/index.js',
+    plugins,
+    output: {
+      file: './dist/app.js',
+      format: 'iife',
+      name: 'mosrings',
+      sourcemap: true
     }
-    return stream;
-  }
-
-  if (watch) {
-    bundler
-      .on('update', function() {
-        rebundle();
-      })
-      .on('log', function(msg) {
-        gutil.log(
-          gutil.colors.green('Watchify:'),
-          gutil.colors.white(msg)
-        );
-      });
-  }
-
-  return rebundle();
-}
-
-function watch() {
-  return compile(true);
-}
-
-gulp.task('build', function() {
-  return compile();
+  }).on('end', (a) => console.log(a));
 });
 
-gulp.task('scripts', function() {
-  return bundleApp(true);
-});
 
-gulp.task('watch', function() {
-  watch();
-});
+gulp.task('scripts', () => bundleApp(true));
 
 gulp.task('serve', serve({
   root: ['.'],
   port: 3001
 }));
 
-gulp.task('watch-less', function() {
-  return gulp.watch('./src/**/*.less', ['less']);
+gulp.task('watch-less', function () {
+  return gulp.watch('./src/**/*.less', gulp.series('less'));
 });
 
-gulp.task('default', ['watch', 'watch-less', 'serve']);
+gulp.task('default', gulp.parallel('watch', 'watch-less', 'serve'));
 
-gulp.task('production', ['build', 'less']);
+gulp.task('production', gulp.parallel('build', 'less'));

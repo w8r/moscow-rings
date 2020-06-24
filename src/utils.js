@@ -1,4 +1,5 @@
-import { point, pointOnLine, linestring } from 'turf';
+import { point, lineString } from '@turf/helpers';
+import pointOnLine from '@turf/nearest-point-on-line';
 import Vec2 from 'vec2';
 import Polygon from 'polygon';
 
@@ -17,6 +18,6 @@ export function planarNearestPoint(pt, feature) {
 
 export function nearestPoint(pt, feature) {
   return point(pointOnLine(
-    linestring(feature.geometry.coordinates[0]), pt
+    lineString(feature.geometry.coordinates[0]), pt
   ).geometry.coordinates, { feature: feature });
 }

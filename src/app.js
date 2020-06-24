@@ -1,8 +1,6 @@
 const L = global.L || require('leaflet');
 
 import xhr from 'xhr';
-import jsonp from 'jsonp';
-import * as Spinner from 'spin.js';
 import * as config from '../config.json';
 import {
   ringStyle, torusStyle,
@@ -10,21 +8,22 @@ import {
 } from './styles';
 import { euclidianDistance, nearestPoint, planarNearestPoint } from './utils';
 
-import turf from 'turf';
 import gjutils from 'geojson-utils';
 import geom from 'leaflet-geometryutil';
 import 'leaflet-hash';
-import { EPSG3857, moscowEquidistant, MOSCOW_BBOX } from './projection';
+import { moscowEquidistant, MOSCOW_BBOX } from './projection';
 import { project, unproject, buffer } from './geojson';
-import Polygon from 'polygon';
-import Vec2 from 'vec2';
 import nominatim from 'nominatim-geocode';
 import formatcoords from 'formatcoords';
 import sortResults from './sort_results';
 
 import Search from './search';
 
-global.turf = turf;
+import turfDistance from '@turf/distance';
+import inside from '@turf/inside';
+import centroid from '@turf/centroid';
+import { point as toPoint, featureCollection } from '@turf/helpers';
+
 
 const MAP_STYLE = 'mapbox.dark';
 const MOSCOW_BOUNDS = L.latLngBounds(
@@ -212,7 +211,7 @@ export default class App {
   _processData(data) {
     // add centroid
     function storeCentroid(f) {
-      f.properties.centroid = turf.centroid(f).geometry.coordinates;
+      f.properties.centroid = centroid(f).geometry.coordinates;
     };
     this._data = data = JSON.parse(data);
     data.features.forEach(storeCentroid, this);
@@ -399,8 +398,8 @@ export default class App {
     let intersections = [];
     let eintersections = [];
 
-    let point = turf.point([latlng.lng, latlng.lat]);
-    let epoint = turf.point(moscowEquidistant.project([latlng.lng, latlng.lat]));
+    let point = toPoint([latlng.lng, latlng.lat]);
+    let epoint = toPoint(moscowEquidistant.project([latlng.lng, latlng.lat]));
 
     var measures = this._data.features.map((feature, index) => {
       let f = feature;
@@ -424,11 +423,11 @@ export default class App {
       intersections.push(nearest);
       eintersections.push(enearest);
 
-      let distance = turf.distance(point, nearest, "kilometers");
+      let distance = turfDistance(point, nearest, "kilometers");
       let edistance = euclidianDistance(
         enearest.geometry.coordinates, epoint.geometry.coordinates);
 
-      if (turf.inside(point, f)) {
+      if (inside(point, f)) {
         distance = -distance;
         edistance = -edistance;
       }
@@ -500,7 +499,7 @@ export default class App {
       }
     }, this);
 
-    return unproject(turf.featurecollection(buffers), moscowEquidistant);
+    return unproject(featureCollection(buffers), moscowEquidistant);
   }
 
   /**

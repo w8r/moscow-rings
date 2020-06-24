@@ -1,12 +1,12 @@
 const L = global.L || require('leaflet');
 import jsts from 'jsts';
-import turf from 'turf';
+import { polygon, featureCollection, combine } from '@turf/helpers';
 
 const QUADRANT_SEGMENTS = 18;
 
 export function buffer(feature, radius){
   if(feature.type === 'FeatureCollection'){
-    let multi = turf.combine(feature);
+    let multi = combine(feature);
     multi.properties = {};
     return _buffer(multi, radius);
   }
@@ -30,10 +30,10 @@ function _buffer(feature, radius) {
       geometry: buffered,
       properties: {}
     };
-    buffered = turf.featurecollection([buffered]);
+    buffered = featureCollection([buffered]);
   }
   else{
-    buffered = turf.featurecollection([turf.polygon(buffered.coordinates)]);
+    buffered = featureCollection([polygon(buffered.coordinates)]);
   }
   // console.timeEnd('jsts');
   return buffered;
